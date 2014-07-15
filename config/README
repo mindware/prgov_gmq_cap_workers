@@ -1,0 +1,53 @@
+Please read this document before modifying any of the files. 
+You need the following properly JSON formatted files in this directory:
+- users.json
+- db.json
+ 
+The first is 'users.json', with a format similar to:
+{
+  "userName1"    : { "passkey" : "generatedPasskey1", "groups" : ["groupName1"] },
+  "userName2"    : { "passkey" : "generatedPasskey2", "groups" : ["groupName1", "groupnName2"] }
+}
+
+Important:
+Please note that the passkey is not just some random text that will be supplied as is
+by the user. The passkey is a combination of cryptographic one-way hashes of one
+auto-generated salt and one auto-generated password for the GMQ. In order to generate
+psswords and passkeys for new users a tool has been provided for you, in the 'scripts/tools/'
+folder. The only way to add new users or change passwords, is by generating them using the
+supplied tool (thor gmq:generate:password or thor gmq:generate:user username group1, group2).
+
+What follows is an example of a properly formatted 'users.json' file:
+{
+  "rci"         : { "passkey" : "9b9b2a8ddf62329a6031d8d2724275c5e1daa72c01dbd2026a83615f",
+                    "groups" : ["sijc"] },
+  "cap_webapp"	: { "passkey" : "299a18a088f2e1e08074863cc03f6b699307eb895fdcd5c2c404e294",
+                    "groups" : ["prgov"] },
+  "cap_worker"	: { "passkey" : "299a18a088f2e1e08074863cc03f6b699307eb895fdcd5c2c404e294",
+                    "groups" : ["worker"] },
+  "***REMOVED***"   : { "passkey" : "759528379170710b70d0e17e62cd142931db535d07bcb8cb4bffe6d9",
+		    "groups" : ["admin"] }
+}
+
+The second is 'db.json' which will contain the configuration for Store systems like so:
+{
+  "driver"  : "synchrony",
+  "servers" : {
+              "redis01"  : {
+                              "user"     : "user1",
+                              "password" : "password1",
+                              "host"     : "localhost",
+                              "port"     : 6379
+              },
+              "redis02" :  {
+                              "user"     : "user2",
+                              "password" : "password2",
+                              "host"     : "localhost",
+                              "port"     : 6380
+              }
+  }
+}
+
+-----
+A restart is required after any configuration files, due to the file being loaded
+in memory to avoid heavy IO use. 

@@ -1,0 +1,12 @@
+
+	✅ Project: Workers
+	==================
+
+
+	+Tasks:
+	-------
+	Pending: 
+		1. ☐ https://github.com/lantins/resque-retry - Try it
+
+---
+Auto-generated using: github.com/mindware/todo

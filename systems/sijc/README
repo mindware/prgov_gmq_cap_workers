@@ -1,0 +1,5 @@
+In order to run this test, you need to have used
+ruby ../webapp/create.rb and copied the id of the
+record, and placed it in this test.
+
+You also need to check the credentials.

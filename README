@@ -1,0 +1,31 @@
+What we needed:
+---------------
+- Persistence
+- See what's pending
+- Modify pending jobs in-place
+- Tags
+- Priorities
+- Fast pushing and popping
+- See what workers are doing
+- See what workers have done
+- See failed jobs
+- Kill fat workers
+- Kill stale workers
+- Kill workers that are running too long
+- Keep Rails loaded / persistent workers
+- Distributed workers (run them on multiple machines)
+- Workers can watch multiple (or all) tags
+
+We looked at:
+-------------
+
+During this project we checked out RabbitMQ, SideKiq, Starling, ActiveMessaging, BackgroundJob, DelayedJob, and beanstalkd. 
+
+Resque:
+-------
+Resque was identified as a good choice for applications that run multiple queues each with many thousands of job entries, where worker behavior can be volatile. Volatile worker behavior is mitigated by forking children processes to handle jobs which ensures that any out of control workers can be dealt with in isolation.
+
+Resque-Retry:
+------------
+Resque while meeting all our requirements did not have built in retry by default. This is left to the user to implement. We identified a highly-active (commits to master ocurred just yesterday) project called Resque-Retry which as the capabilty for exponential backoff, a feature we were going to implement. Seeing as the project is stable, active and does exactly what we meant to do, we've incorporated it into our project. 
+
