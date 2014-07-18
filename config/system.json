@@ -5,6 +5,7 @@
   "debug"                 : true,
   "backtrace_errors"      : false,
   "display_results"       : true,
-  "display_certificates"  : false, 
-  "downtime"              : false
+  "display_certificates"  : false,
+  "downtime"              : false,
+  "temp_dir"              : "/tmp/automata"
 }

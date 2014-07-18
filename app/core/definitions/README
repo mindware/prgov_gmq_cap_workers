@@ -1,0 +1,3 @@
+In order to maintain a consistent library of helpers and models,
+This folder contains definitions that define modules and classes
+used by some of the helper methods of the GMQ API. 
