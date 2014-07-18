@@ -43,7 +43,7 @@ module PRGMQ
             message = StoreUnavailable.data
           else
             # For all other exceptions, use our generic error
-            puts "An #{e.class.to_s} error was raised." if Config.debug
+            puts "An #{e.class.to_s.bold.red} error was raised." if Config.debug
             message = AppError.data
             klass = AppError
             message["error"]["app_exception_class"] = "#{e.class.to_s}"
@@ -72,10 +72,10 @@ module PRGMQ
           end # end of developer enviornment check
 
           # Print to STDOUT the full errors if in debug mode.
-          debug "Error:\n#{message}", false if Config.debug
+          debug "#{"Error".red}:\n#{message}", false if Config.debug
           # Print out dashes to make it easy to destinguish where our
           # request output ends.
-          debug "#{ "-" * 80 }\n", false
+          debug "#{ ("-" * 80).bold.yellow }\n", false
 
           throw :error, :message => message, :status => klass.http_code
         end # end of begin/rescue
@@ -772,7 +772,7 @@ module PRGMQ
     class ServiceUnavailable < PRGMQ::CAP::AppError
       def self.data
         { "error" => { "http_message" => "503 Service Unavailable",
-                       "http_code" => 502,
+                       "http_code" => 503,
                        "app_error"  => "This service is currently "+
                                        "unavailable. Down for maintenance.",
                        "app_code" => 8000

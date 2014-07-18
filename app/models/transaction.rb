@@ -347,8 +347,8 @@ module PRGMQ
         # We are no longer using multi, as our Storage proxy
         # does not support multi/exec. It does support pipelining
         # however, so that's what we're using for atomic operations.
-        debug "Saving transaction in Redis under key \"#{db_id}\""
-        debug "View it in Redis using: GET #{db_id}"
+        debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
+        debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
         Store.db.pipelined do
           # don't worry about an error here, if the db isn't available
           # it'll raise an exception that will be caught by the system
@@ -372,6 +372,7 @@ module PRGMQ
           # after this line, db.multi runs 'exec', in an atomic fashion
           # Store.db.lpush()
         end
+        debug "Saved transaction. View it in Redis using: GET #{db_id}"
         true
       end
 

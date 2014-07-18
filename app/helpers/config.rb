@@ -6,7 +6,7 @@ module PRGMQ
 
           class << self
               attr_reader :all, :backtrace_errors, :debug, :users, :downtime,
-                          :logging, :logger, :system, :display_results
+                          :logging, :logger, :system, :display_results, :display_certificates
               attr_writer :downtime
           end
 
@@ -37,7 +37,9 @@ module PRGMQ
           # variable that determines if we're down for maintenance.
           @downtime = false
           @display_results = false
-
+	  # variable that determines if incoming base64 certs are displayed in
+	  # console and logged.
+	  @display_certificates = false
 
           # Gets the current environment (production, development, testing)
           # from the Webserver. At this time, we use Goliath for its awesome
@@ -135,10 +137,17 @@ module PRGMQ
               # here we check if the config is already loaded in memory
               if @all.nil?
                 if(load_config)
-                  puts "Loading configuration file into memory:\n"+
-                  "Logging: #{@logging}, Debug mode: #{@debug}, Backtrace: "+
-                  "#{@backtrace_errors}, Results: #{@display_results}, "+
-                  "Downtime: #{@downtime}" if @debug
+		  # Once the configuration is loaded, print some info to STDOUT
+                  puts "Loading configuration files into memory: #{@all.keys.join(", ").to_s}"
+		  puts "Allowed users: #{@all["users"].keys.join(", ")}" if @debug
+		  print "System settings:"# if @debug
+		  list = ""
+		  @all["system"].each do |key, value| 
+			list << " #{key.green}: #{value.to_s.bold.green}," 
+		  end
+		  # print the list, but remove the last character (,)
+		  puts list.chop.scan(/.{1,151}/m)  #if @debug
+		  list = ""
                 end
               end
               return true
@@ -168,9 +177,16 @@ module PRGMQ
                # clean up memory
                user_config, db_config, system_config = nil,nil, nil
                @debug     = @all["system"]["debug"]  unless @all["system"]["debug"].nil?
-               @backtrace_errors = @all["system"]["backtrace_errors"] if !@all["system"]["backtrace_errors"].nil? and @debug
+	       # Backtrace is always false, unless we're in debug mode and its explictely on 
+	       if @debug == true
+               	@backtrace_errors = @all["system"]["backtrace_errors"] if !@all["system"]["backtrace_errors"].nil?
+	       else
+	       	@backtrace_errors = false
+		@all["system"]["backtrace_errors"] = false
+	       end
                @logging   = @all["system"]["logging"] unless @all["system"]["logging"].nil?
                @downtime  = @all["system"]["downtime"] unless @all["system"]["downtime"].nil?
+	       @display_certificates = @all["system"]["display_certificates"] unless @all["system"]["display_certificates"].nil?
                # Determines wether we print out to STDOUT what we send to our
                # clients. So, with this, you can see in the console the HTTP
                # result sent to clients.
@@ -261,3 +277,7 @@ module PRGMQ
       end
   end
 end
+
+# If we ever recode this module, remove the global variables and use 
+# accessible methods for each of the global variables. No more @debugging 
+# instead we use something like: def debugging @all["system"]["debug"] end 

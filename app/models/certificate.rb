@@ -1,12 +1,5 @@
-# First, fix the paths so that every scripts used by this test is properly found and
-# is in the ruby path. This way we don't have to include relative filepaths
-$: << File.expand_path(File.dirname(__FILE__))
-
+# Model that can take a base64 file and dump it into a pdf
 require 'base64'
-
-require 'app/core/definitions'
-require "app/helpers/library"
-Dir["app/helpers/*.rb"].each {|file| require file }
 
 module PRGMQ
 	module CAP
