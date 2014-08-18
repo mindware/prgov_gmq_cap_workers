@@ -1,1 +1,1 @@
-{"Workers":{"+Tasks":{"Pending":["https://github.com/lantins/resque-retry - Try it"],"Done":[]}}}
+{"Workers":{"+Tasks":{"Pending":["Create scheduler that deletes files from Config.temp_folder that are older than X amount of time. To clean up stale certificates.","Load the admin website for resque-retry in Procfile"],"Done":[]}}}

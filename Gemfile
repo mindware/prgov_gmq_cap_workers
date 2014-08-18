@@ -1,6 +1,7 @@
 # A sample Gemfile
 source "https://rubygems.org"
 
+gem 'rake'
 gem 'dotenv'
 gem 'foreman'
 gem 'erubis' # for auto escaping HTML - http://www.sinatrarb.com/faq.html#escape_html
@@ -12,4 +13,9 @@ gem "redis", "~> 3.0.1" # starting with version 2.2.0, redis-rb is thread-safe b
 gem 'aasm', "~> 3.2.0"
 
 # Workers: 
+gem 'resque', "~> 1.25.2"
+gem 'resque-scheduler', "~> 3.0" 
 gem 'resque-retry'
+
+# Email:
+gem 'mail'

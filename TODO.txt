@@ -1,12 +1,12 @@
 
-	✅ Project: Workers
-	==================
+Project: Workers
+================
 
-
-	+Tasks:
-	-------
-	Pending: 
-		1. ☐ https://github.com/lantins/resque-retry - Try it
++Tasks
+------
+Pending:
+1. Create scheduler that deletes files from Config.temp_folder that are older than X amount of time. To clean up stale certificates.
+2. Load the admin website for resque-retry in Procfile
 
 ---
 Auto-generated using: github.com/mindware/todo
