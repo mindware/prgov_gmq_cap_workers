@@ -1,3 +1,9 @@
+# Load our external storage libraries
+require 'em-synchrony'                       # Fiber aware connection pools
+require 'redis'				  										 # use redis
+require 'redis/connection/synchrony'         # use the asynchronous driver
+
+
 module PRGMQ
   module CAP
     # The Store class is not meant to be an instance. We use this
@@ -13,6 +19,10 @@ module PRGMQ
       # commands for querying and manipulating those data structures
       # over a network connection.
 
+      def self.system_prefix
+        "gmq"
+      end
+
       # When storing data, we'll want a specific structure in Redis
       # so our keys will be easier to organize and retrieve.
       # The following method defines the structure for all keys to be
@@ -22,7 +32,7 @@ module PRGMQ
       # API called 'cap' will be stored in the following way:
       # 'cap:tx:id'
       def self.db_prefix
-        "gmq:cap"
+        "#{system_prefix}:cap"
       end
 
       # Let's also make this a class method, so we can
@@ -50,10 +60,12 @@ module PRGMQ
               # If we weren't running on Eventmachine, we'd use a different one
               # such as hiredis
               puts "Storage: connecting to #{Config.db_name} at #{Config.db_host}:#{Config.db_port} "+
-                   "(using #{Config.db_driver} driver)..."
-              @db = Redis.new(:host =>   Config.db_host,
+                   "(using #{Config.db_driver} driver with a pool_size of #{Config.db_pool_size})..."
+              @db = EventMachine::Synchrony::ConnectionPool.new(size: Config.db_pool_size) do
+                    Redis.new(:host =>   Config.db_host,
                               :port =>   Config.db_port,
                               :driver => Config.db_driver)
+              end
           else
               @db
           end

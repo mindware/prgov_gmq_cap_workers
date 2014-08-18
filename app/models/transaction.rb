@@ -31,17 +31,46 @@ module PRGMQ
       extend TransactionIdFactory
       include LibraryHelper
 
+      # Expiration: Transaction expiration means expiration from the DB
+      # as in, disappearing from the system entirely.
+      #
+      # This shouldn't be confused with the expiration of a certificate.
+      # A certificate could be invalidated by the PR.Gov validation system
+      # even if its transaction still hasn't expired. For example, say it has
+      # been determined that a certificate shouldn't be valid after 1 month,
+      # in such a case PR.Gov validation mechanism could check the transaction
+      # approval date and see if it has already reached its certificate
+      # expiration limit. However, the Transaction expiration might still not
+      # have come into effect, and thus, we could have the ability to peer into
+      # the transaction for administrative and audit purposes long after the
+      # certificate has already expired.
+      #
+      # Important Hint for Backup Restoration and Transaction Expiration:
+      #
+      # Administrators, "Hear ye, hear ye!". This is important.
+      # Transaction expiration is going to be performed at the Storage level.
+      # This means if you ever manually restore a backup, in order to peer at
+      # old transactions, such as for an audit, it is important that the time
+      # of the server is modified to the past in question, otherwise, the
+      # storage system will see the time difference (Redis) and determine that
+      # the transactions expiration time has come up, and immediately expire
+      # data. This is because the storage mechanism that performs expiration of
+      # keys does it using the current time. If you restore data from the past
+      # into a server whose datetime is configured to the present or future,
+      # expiration will come into effect for anythign that should be expired.
+      #
       # If you set MONTHS_TO_EXPIRATION_OF_TRANSACTION to 0, transactions
       # will never expire. (Hint: that could fill up the database store, be
-      # careful). Only do it if you know what you're doing.
+      # careful). Only do it if you know what you're doing or would like to get
+      # fired. Seriously, don't do it.
       # By default, we use 1 or three months to keep the transaction in the
       # system for inspection. Once expired, it's really gone!
       # Max is 25 years (25 * 12). Don't try it.
       MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
-      # The expiration is going to be 8 months, in seconds
+      # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:
       # 604800 seconds in a week X 4 weeks = 1 month in seconds
-      # Multiply this amount for the amount of months that a transaction
+      # We multiply this amount for the Z amount of months that a transaction
       # can last before expiring.
       EXPIRATION = (604800 * 4) * MONTHS_TO_EXPIRATION_OF_TRANSACTION
 
@@ -78,27 +107,38 @@ module PRGMQ
                     :created_at,           # creation date
                     :updated_at,           # last update
                     :created_by,           # the user that created this
-                    :certificate_base64,   # The base64 certificate
+                    :certificate_base64,   # The base64 certificate -
+                                           # currently just a flag that lets us
+                                           # know it was already generated so
+                                           # we can pick it up in SIJC.
+                                           # PR.Gov is no longer storing
+                                           # certificates, when SIJC calls back
+                                           # after generation. Due to a storage
+                                           # issue related to RAM and Redis.
+                                           # Instead, workers pick up the
+                                           # certificate as they're ready to
+                                           # email a certificate.
                     :analyst_fullname,     # The fullname of the analyst at
                                            # PRPD that authorized this request.
                     :analyst_id,           # The user id of the analyst at PRPD
                                            # that authorized this request
-                                           # through their ANPE System.
+                                           # through their System.
                     :analyst_approval_datetime, # The exact date and time in
                                                 # which the user approved this
                                                 # action. This must correspond
                                                 # with the tiemstamps in the
-                                                # PRPD’s internal system, such
-                                                # iANPE so that in the event of
+                                                # PRPD’s analyst system, such
+                                                # RCI, so that in the event of
                                                 # an audit correlation is
                                                 # possible.
                     :analyst_transaction_id,    # The internal id of the
                                                 # matching request in the
-                                                # ANPE DB. This id can be used
+                                                # Analyst System. This id
+                                                # can be used
                                                 # in case of an audit.
                     :analyst_internal_status_id,# The matching internal
-                                                # decision code id of the ANPE
-                                                # system.
+                                                # decision code id of the
+                                                # system used by the analysts.
                     :decision_code,             # The decision of the analyst at
                                                 # PRPD of what must be done with
                                                 # transaction after their
@@ -107,8 +147,26 @@ module PRGMQ
                                                 # decisions are supplied by the
                                                 # PRPD system login only:
                                                 # 100 - Issue Negative Cert
-                                                # 200 - May not Issue Negative
-                                                #       Cert.
+                                                # 200 - Positive Certificate
+                    :identity_validated,        # This tells us if the citizen
+                                                # was identified in a Gov db
+                                                # nil: if nothing done yet
+                                                # true: validated
+                                                # false: failed validation
+                    :emit_certificate_type,     # The type of certificate we
+                                                # have been told we are to
+                                                # receive and send:
+                                                # "positive" - a positive cert
+                                                # "negative" - a negative cert
+                                                # This is set not only by the
+                                                # decision_code when a fuzzy
+                                                # result requires an PRPD
+                                                # analyst, but also by
+                                                # RCI when it determines
+                                                # it has enough data to make a
+                                                # decision.
+                    :certificate_path           # The temporary file path to the
+                                                # certificate in disk.
       # Newly created Transactions
       def self.create(params)
 
@@ -179,6 +237,9 @@ module PRGMQ
               self.analyst_transaction_id     = params["analyst_transaction_id"]
               self.analyst_internal_status_id = params["analyst_internal_status_id"]
               self.decision_code              = params["decision_code"]
+              self.identity_validated         = params["identity_validated"]
+              self.emit_certificate_type      = params["emit_certificate_type"]
+              self.certificate_path           = params["certificate_path"]
 
               # If we had servers in multiple time zones, we'd want
               # to use utc in the next two lines. This might be important
@@ -219,6 +280,9 @@ module PRGMQ
           @analyst_transaction_id = nil
           @analyst_internal_status_id = nil
           @decision_code = nil
+          @identity_validated = nil
+          @emit_certificate_type = nil
+          @certificate_path = nil
       end
 
       def to_hash
@@ -249,11 +313,12 @@ module PRGMQ
         return h
       end
 
+      # Turns a hash into a json object
       def to_json
         to_hash.to_json
       end
 
-      # just an alias
+      # just an alias in order to have an instance method available
       def ip
         self.IP
       end
@@ -331,6 +396,77 @@ module PRGMQ
           end
       end
 
+      # Class method that returns a list of the last transactions in the system
+      # TODO: check what this returns when db is empty.
+      def self.last_transactions
+          Store.db.lrange(Transaction.db_list, 0, -1)
+      end
+
+
+      # This method returns the data stored for a worker's job
+      def job_data
+        # "#{db_id}:#{Time.now.utc.to_i}"
+        '{ "class" : "Worker", "args" : ["arg1"]}'
+      end
+
+      # This method returns the name of the queue we're going to use
+      def queue_pending
+        "resque:queue:prgov_request"
+      end
+
+      # a method that creates fake transactions
+      # for a massive stress test. This method is available
+      # to the admin member group only and is available only
+      # to stress test the system. This was necessary in order
+      # to perform a GET request that results in the equivalent
+      # of a POST in the system. This becomes disabled in production
+      # automatically.
+      def self.stress_test_save
+        # this works only in test and development environments
+        if Config.environment == "test" or Config.environment == "development"
+            param = JSON.parse('{
+            "email":"acolon@ogp.pr.gov",
+            "ssn":"111223333",
+            "license_number":"123456789",
+            "first_name":"Andrés",
+            "middle_name":null,
+            "last_name":"Colón",
+            "mother_last_name":"Pérez",
+            "IP":"192.168.1.2",
+            "birth_date":"01/01/1982",
+            "residency":"San Juan",
+            "reason":"STRESS TEST",
+            "language":"spanish",
+            "location":"PR.gov GMQ",
+            "history":null,
+            "state":"started",
+            "status":"received",
+            "system_address":"127.0.0.1",
+            "created_at":"2014-08-15T19:50:45.868Z",
+            "updated_at":"2014-08-15T19:50:45.868Z",
+            "created_by":"***REMOVED***",
+            "certificate_base64":null,
+            "analyst_fullname":null,
+            "analyst_id":null,
+            "analyst_approval_datetime":null,
+            "analyst_transaction_id":null,
+            "analyst_internal_status_id":null,
+            "decision_code":null,
+            "identity_validated":null,
+            "emit_certificate_type":null,
+            "certificate_path":null}')
+            tx = Transaction.create(param)
+            tx.save
+            return tx
+        else
+          # this won't be available when we're
+          # not in debug mode.
+          raise ResourceNotFound
+        end
+      end
+
+      # The public method that allows this instance to be saved to the
+      # database.
       def save
         # We have to retrieve this here, incase we ever need values here
         # from the Store. If we do it inside the multi or pipelined
@@ -339,43 +475,68 @@ module PRGMQ
         # the following to_json call here, we would've retrieved the data
         # needed before the save.
         json = self.to_json
+        # do a pipeline command, executing all commands in an atomic fashion.
+        pipelined_save(json)
+        # puts caller
+        debug "#{"Hint".green}: View the transaction data in Redis using: GET #{db_id}\n"+
+              "#{"Hint".green}: View the last #{LAST_TRANSACTIONS_TO_KEEP_IN_CACHE} transactions using: "+
+              "LRANGE #{db_list} 0 -1\n"+
+              "#{"Hint".green}: View the items in pending queue using: LRANGE #{queue_pending} 0 -1\n"+
+              "#{"Hint".green}: View the last item in the pending queue using: LINDEX #{queue_pending} 0"
+        return true
+    end
 
-        # do a multi command. Doing multiple commands in an
-        # atomic fashion:
-        # Store.db.multi do
-
-        # We are no longer using multi, as our Storage proxy
-        # does not support multi/exec. It does support pipelining
-        # however, so that's what we're using for atomic operations.
+    # This is the
+    # Additional info:
+    # This method is private & not meant to be called directly only through save.
+    # This method saves using a redis pipeline, which means that all commands
+    # in the pipeline block are actually called in a single request
+    # on the database. It is very important that within the
+    # pipeline block, any interaction with the database, be it an instance
+    # method or class method, uses the db_connection already opened for the
+    # pipeline. Store.db must not be called directly or indirectly from within
+    # that pipeline, or else a new connection from the Connection Pool would
+    # be used, which would lead to instability in the system. By recycling the
+    # same db connection, we make the system perform with excellent performance.
+    def pipelined_save(json)
         debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
         debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
-        Store.db.pipelined do
+        debug "Store Pipeline: Attempting to save into \"#{queue_pending}\" queue"
+
+        # This is where we do an atomic save on the database. We grab a
+        # connection from the pool, and use it. If a connection is unavailable
+        # the code (Fiber) will be on hold, and will magically resume properly
+        # thanks to our use of EM-Synchrony.
+        Store.db.pipelined do |db_connection|
           # don't worry about an error here, if the db isn't available
           # it'll raise an exception that will be caught by the system
-          Store.db.set(db_id, json)
-
+          db_connection.set(db_id, json)
           # If TTL is not nil
           if(EXPIRATION > 0)
-            Store.db.expire(db_id, EXPIRATION)
+            db_connection.expire(db_id, EXPIRATION)
           end
 
-          # We used to add them by score (time) to a sorted list
-          # but we can achieve that with a simple list.
-          # debug "Adding to ordered transaction list: #{db_list}"
-          # debug "View it using: ZREVRANGE '#{db_list}' 0 -1"
-          # Store.db.zadd(db_list, updated_at.to_i, db_id)
+          # Add it to a list of the last couple of items items
+          db_connection.lpush(db_list, db_cache_info)
+          # trim the items to the maximum allowed, determined by this constant:
+          db_connection.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
+          # Add it to our GMQ pending queue, to be grabbed by our workers
+          db_connection.rpush(queue_pending, job_data)
 
-          # Add it to a list of the last 10 items
-          Store.db.lpush(db_list, db_cache_info)
-          # trim the items to the last 10
-          Store.db.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
-          # after this line, db.multi runs 'exec', in an atomic fashion
-          # Store.db.lpush()
+          # We can't use any method that uses Store.db here
+          # because that would cause us to checkout a db connection from the
+          # pool for each of those commands; the pipelined commands need to
+          # run on the same connection as the commands in the pipeline,
+          # so we will not use the Store.add_pending method. For any
+          # of our own method that requires access to the db, we will
+          # recycle the current db_connection. In this case, the add_pending
+          # LibraryHelper method supports receiving an existing db connection
+          # which makes it safe for the underlying classes to perform
+          # database requests, appending them to this pipeline block.
+          add_pending(db_connection)
         end
-        debug "Saved transaction. View it in Redis using: GET #{db_id}"
-        true
-      end
-
+        debug "Saved!".bold.green
+    end
 
       # Called when the transaction's certificate has been generated.
       # in the case of this API it means SIJC's RCI has generated the
@@ -406,6 +567,9 @@ module PRGMQ
           self.decision_code              = params["decision_code"]
           self
       end
+
+      # declare our private methods here
+      private :pipelined_save
 
     end
   end

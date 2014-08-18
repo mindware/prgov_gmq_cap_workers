@@ -16,7 +16,7 @@ module PRGMQ
         SSN_LENGTH              = 9       # In 2014 SSN length was 9 digits.
         MAX_EMAIL_LENGTH        = 254     # IETF maximum length RFC3696/Errata ID: 1690
         DTOP_ID_MAX_LENGTH      = 20      # Arbitrarily selected length. Review this!
-        ANPE_USER_ID_MAX_LENGTH = 255     # Arbitrarily selected length. Review this!
+        PRPD_USER_ID_MAX_LENGTH = 255     # Arbitrarily selected length. Review this!
         MAX_NAME_LENGTH         = 255     # Max length for individual components of
                                           # a full name (name, middle, last names)
         MAX_FULLNAME_LENGTH     = 255     # Max length for full name. 255 is long
@@ -229,7 +229,7 @@ module PRGMQ
         end
 
         def validate_analyst_id(value)
-          return false if(value.to_s.length >= ANPE_USER_ID_MAX_LENGTH)
+          return false if(value.to_s.length >= PRPD_USER_ID_MAX_LENGTH)
           return true
         end
 

@@ -5,28 +5,46 @@ module PRGMQ
       class Config
 
           class << self
-              attr_reader :all, :backtrace_errors, :debug, :users, :downtime,
-                          :logging, :logger, :system, :display_results, :display_certificates
-              attr_writer :downtime
+              attr_reader :all,   # holds configurations in memory
+                          :backtrace_errors, # determines if we print backtrace
+                          :debug, # This tells us if we're in debugging mode
+                          :users, # class method to grab user config from @all
+                          :downtime,# determines if we're in maintainance
+                          :logging, # determines if we're logging
+                          :logger,  # returns the logger object. STDOUT if not logging
+                          :system,  # class method that returns system config in @all
+                          :display_results, # shows what we return to client, in console
+                          :display_certificates # prints out base64 data to console
+              attr_writer :downtime # This setter lets us go into maintainance mode
           end
 
 
           # General Class Defaults
           # This will be overwritten when the configuration loads.
           @all = nil
+
+          # We define constants for the configuration
+          CONFIG_DIR    = "config"
+          CONFIG_USER   = "#{CONFIG_DIR}/users.json"
+          CONFIG_DB     = "#{CONFIG_DIR}/db.json"
+          CONFIG_SYSTEM = "#{CONFIG_DIR}/system.json"
+
           # if Goliath is defined
           if(Object.const_defined?('Goliath'))
             # Set debug to true if we're in development mode.
             @debug = (Goliath.env.to_s == "development")
           else
-            puts "WARNING: Config could not determine current environment "+
-                 "from Webserver. Are we not using Goliath? This will affect "+
-                 "API's Config.environment method for checking environment and "+
-                 "displaying debugging information. For now, we'll default "+
-                 "into 'production' for safety. If you're not running the "+
-                 "actual webserver, you can ignore this message, otherwise "+
-                 "if you are, this needs fixing if you ever want to see "+
-                 "debugging information! Please look into it."
+            # puts "WARNING: Config could not determine current environment "+
+            #      "from Webserver. Are we not using Goliath? This will affect "+
+            #      "API's Config.environment method for checking environment and "+
+            #      "displaying debugging information. For now, we'll default "+
+            #      "into 'production' for safety. If you're not running the "+
+            #      "actual webserver, you can ignore this message, otherwise "+
+            #      "if you are, this needs fixing if you ever want to see "+
+            #      "debugging information! Please look into it."
+            warn "Info: This script doesn't appear to be running in a "+
+                 "Goliath webserver environment. See app/helpers/config.rb "+
+                 "for commented information."
             @debug = false
           end
 
@@ -36,30 +54,38 @@ module PRGMQ
           @logging = true
           # variable that determines if we're down for maintenance.
           @downtime = false
+          # Determines wether we print out to STDOUT what we send to our
+          # clients. So, with this, you can see in the console the HTTP
+          # result sent to clients.
           @display_results = false
-	  # variable that determines if incoming base64 certs are displayed in
-	  # console and logged.
-	  @display_certificates = false
+      	  # variable that determines if incoming base64 certs are displayed in
+      	  # console and logged.
+      	  @display_certificates = false
 
           # Gets the current environment (production, development, testing)
           # from the Webserver. At this time, we use Goliath for its awesome
           # asynchronous EM capabilities.
+
           def self.environment
             if(Object.const_defined?('Goliath'))
-               Goliath.env.to_s
+               return Goliath.env.to_s
             else
               # By default if we can't determine our environment,
               # we'll go into production mode. This could happen if someone
               # changed our webserver from Goliath to some other wordly
               # webserver. We'll need a way to get the current environment
               # from that webserver.
-               "production"
+              puts "Config was unable to determine webserver environment. "+
+                   "Auto-selecting production mode."
+              return "production"
             end
           end
 
           # This determines the log file
           # For alternative configuration see:
           # http://www.ruby-doc.org/stdlib-2.1.2/libdoc/logger/rdoc/Logger.html
+          # This returns our logger. If the system is configured to log, we
+          # use our logging strategy. If not, we
           def self.logger
             # @logger ||= Logger.new('logs/foo.log', 'daily')
             # Taking into considerations daily backups at unknown hours, we
@@ -67,14 +93,21 @@ module PRGMQ
             # turns out log files in a week become too huge, with the following:
             # @logger ||= Logger.new('logs/foo.log', 'weekly')
 
-            # Alternatively, to make sure we don't store more than a
-            if @logging
-              #  @logger ||= Logger.new("logs/#{self.environment}.log", 10, 10024000)
+            # Our logging strategy:
+            # Alternative to the strategies outlined above, in order to make
+            # sure we don't store more than the given amount of space we've been
+            # provided, we have a logging strategy with a maximum log retention
+            # and maximum log space (max bytes). For example, we could have
+            # have a maximum amount of 10 logs, of a maximum size of 10mb.
+            # Doing this, we could store a maximum of 100MB of logs.
+            # These settings are set in the systems configuration file
+            # (ie: config/systems.json)
+            if @logging and !@all.nil?
               @logger ||= Logger.new("logs/#{self.environment}.log",
                                      @all["system"]["logs_max_retention"],
                                      @all["system"]["logs_max_bytes"])
             else
-              # If we're not logging, we default to STDOUT
+              # If we're not logging, we default to STDOUT.
               API.logger
             end
           end
@@ -137,17 +170,17 @@ module PRGMQ
               # here we check if the config is already loaded in memory
               if @all.nil?
                 if(load_config)
-		  # Once the configuration is loaded, print some info to STDOUT
+		              # Once the configuration is loaded, print some info to STDOUT
                   puts "Loading configuration files into memory: #{@all.keys.join(", ").to_s}"
-		  puts "Allowed users: #{@all["users"].keys.join(", ")}" if @debug
-		  print "System settings:"# if @debug
-		  list = ""
-		  @all["system"].each do |key, value| 
-			list << " #{key.green}: #{value.to_s.bold.green}," 
-		  end
-		  # print the list, but remove the last character (,)
-		  puts list.chop.scan(/.{1,151}/m)  #if @debug
-		  list = ""
+            		  puts "Allowed users: #{@all["users"].keys.join(", ")}" if @debug
+            		  print "System settings:"# if @debug
+            		  list = ""
+            		  @all["system"].each do |key, value|
+            			list << " #{key.green}: #{value.to_s.bold.green},"
+            		  end
+            		  # print the list, but remove the last character (,)
+            		  puts list.chop.scan(/.{1,151}/m)  #if @debug
+            		  list = ""
                 end
               end
               return true
@@ -166,9 +199,9 @@ module PRGMQ
                # and the configurations will be in local memory, making it
                # very fast to check configurations and perform authentication,
                # without network roundtrips.
-               user_config   = load_config_file("config/users.json")
-               db_config     = load_config_file("config/db.json")
-               system_config = load_config_file("config/system.json")
+               user_config   = load_config_file(CONFIG_USER)
+               db_config     = load_config_file(CONFIG_DB)
+               system_config = load_config_file(CONFIG_SYSTEM)
                @all = {
                            "users"   => user_config,
                            "db"      => db_config,
@@ -177,16 +210,16 @@ module PRGMQ
                # clean up memory
                user_config, db_config, system_config = nil,nil, nil
                @debug     = @all["system"]["debug"]  unless @all["system"]["debug"].nil?
-	       # Backtrace is always false, unless we're in debug mode and its explictely on 
-	       if @debug == true
-               	@backtrace_errors = @all["system"]["backtrace_errors"] if !@all["system"]["backtrace_errors"].nil?
-	       else
-	       	@backtrace_errors = false
-		@all["system"]["backtrace_errors"] = false
-	       end
+      	       # Backtrace is always false, unless we're in debug mode and its explictely on
+      	       if @debug == true
+                     	@backtrace_errors = @all["system"]["backtrace_errors"] if !@all["system"]["backtrace_errors"].nil?
+      	       else
+      	       	@backtrace_errors = false
+  		          @all["system"]["backtrace_errors"] = false
+      	       end
                @logging   = @all["system"]["logging"] unless @all["system"]["logging"].nil?
                @downtime  = @all["system"]["downtime"] unless @all["system"]["downtime"].nil?
-	       @display_certificates = @all["system"]["display_certificates"] unless @all["system"]["display_certificates"].nil?
+               @display_certificates = @all["system"]["display_certificates"] unless @all["system"]["display_certificates"].nil?
                # Determines wether we print out to STDOUT what we send to our
                # clients. So, with this, you can see in the console the HTTP
                # result sent to clients.
@@ -245,6 +278,15 @@ module PRGMQ
             index = @all["db"]["servers"].keys[0]
           end
 
+          def self.db_pool_size
+            # this is the pool size for connections
+            if(@all["db"].has_key? "pool_size")
+               @all["db"]["pool_size"]
+            else
+              2
+            end
+          end
+
           # Selects which db host to connect to
           # later we could iterate through the hosts found in db.
           def self.db_host
@@ -278,6 +320,6 @@ module PRGMQ
   end
 end
 
-# If we ever recode this module, remove the global variables and use 
-# accessible methods for each of the global variables. No more @debugging 
-# instead we use something like: def debugging @all["system"]["debug"] end 
+# If we ever recode this module, remove the global variables and use
+# accessible methods for each of the global variables. No more @debugging
+# instead we use something like: def debugging @all["system"]["debug"] end

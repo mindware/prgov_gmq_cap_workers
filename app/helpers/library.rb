@@ -7,6 +7,8 @@ module PRGMQ
 			# He had proper credentials to get into the API. Here we retrieve his
 			# groups to check if he is able to access a resource only available to
 			# allowed_groups.
+			# After we determine if the user is allowed the resource or not we
+			# either return the user's id, or we raise an exception.
 			def allowed?(allowed_groups)
 				# we grab the current user from the environment. This is after
 				# said user has passed the scrutiny of a basic authentication.
@@ -22,6 +24,46 @@ module PRGMQ
 						raise InvalidAccess
 				end
 			end
+
+
+			# As this is not priority, this is not implemented at this time:
+			# This is a security measure that could be implemented over Grape API's
+			# present method. The present method is used by Grape in order to allow
+			# Grape Entities to show specific parts of an object in a json format.
+			# Present allows us to send variables to Grape Entities before they
+			# are rendered, and Grape Entities allows us to use those parameters to
+			# determine if we want to show a property of the object or not. This
+			# is typically used when you want to restrict some property from an
+			# object from being displayed if X variables is present.
+			# However, when we have to do checks for multiple types of variables
+			# for a single property, the entity code becomes quite complex and ugly
+			# quickly. In order to keep things more simple, and allow our API to
+			# restrict which groups of users can see which properties, we're could
+			# create entities for the different groups.
+			# For example: in the ../entities/ folder
+			# We could have entity classes defined, such as "TransactionSIJC",
+			# "TransactionWorkers", etc.
+			#
+			# The show method will automate the process of selecting the right
+			# entity depending on the group the user belongs to. Since a user
+			# can belong to multiple groups, we'll check the groups by highest access
+			# first, in a descending order. We'll use the security group that
+			# grants the most visibility first.
+			#
+			# Commented out for now, as it is low priority at this time, and we won't
+			# need to replace the 'present' methods in the API any time soon.
+			# In the future, we if we need more fine grained control of what an
+			# admin sees, vs what progv, workers and other agencies see, we should
+			# could implement this easily.
+			# def show
+			# 	# The entity    # which group only has access to it
+			# 	#entities = {
+			#                 "TransactionSIJC" => [sijc"],
+			#								  "TransactionCreate" => ["prgov"]
+			#									}
+			#   # Here check the current user's groups
+			#   # and show only the highest transction entity that he has access to.
+			# end
 
 			def logger
 				# This will return an instance of the Logger class from Ruby's
@@ -40,36 +82,95 @@ module PRGMQ
 			end
 
 			# tells the stats to add a visit
-			def add_visit
-				Stats.add_visit
+			def add_visit(db_connection=nil)
+				Stats.add_visit(db_connection)
 			end
 
-			def total_visits
-					visits = Stats.visits
+			# tells the stats to add a visit
+			def add_pending(db_connection=nil)
+				Stats.add_pending(db_connection)
+			end
+
+			def remove_pending(db_connection=nil)
+				Stats.remove_pending(db_connection)
+			end
+
+			# tells the stats to add a visit
+			def add_completed(db_connection=nil)
+				Stats.add_visit(db_connection)
+			end
+
+			# get totals from stats
+			def total_pending(db_connection=nil)
+				pending = Stats.pending(db_connection)
+				pending.nil? ? 0 : pending
+			end
+
+			# get totals from stats
+			def total_visits(db_connection=nil)
+					visits = Stats.visits(db_connection)
 					visits.nil? ? 0 : visits
 			end
 
 			# helper method to interact with Stats and get completed transactions
-			def total_completed
-					completed = Stats.completed
+			def total_completed(db_connection=nil)
+					completed = Stats.completed(db_connection)
 					completed.nil? ? 0 : completed
 			end
 
 			# Prints details if we're in debug mode
-			def debug(str, use_title=false)
-				  title = "DEBUG: " if use_title
+			def debug(str, use_title=false, use_prefix=true, log_type="info")
+				  title = "DEBUG: "   if use_title
+					prefix = str_prefix.brown	if use_prefix
 				  # print to screen
-				  puts "#{title}#{str}" if Config.debug
-				  # strip of colors and log it
-				  logger.info str.no_colors
+				  # puts "#{title}#{str}" if Config.debug
+				  # strip of colors and log each line
+					str.split("\n").each do |line|
+						puts "#{prefix}#{title}#{line}" if Config.debug
+						case log_type
+							when "warn"
+									 logger.warn "#{prefix}#{line}".no_colors
+							when "error"
+									 logger.error "#{prefix}#{line}".no_colors
+							when "fatal"
+									 logger.fatal "#{prefix}#{line}".no_colors
+							else
+									 logger.info "#{prefix}#{line}".no_colors
+						end
+					end
 			end
-			#
+
+			def warn(str)
+				debug(str, false, true, "warn")
+			end
+
+			def fatal(str)
+				debug(str, false, true, "fatal")
+			end
+
+			def error_msg(str)
+				debug(str, false, true, "error")
+			end
+
+			# Used to define prefixes for strings, useful for prepending strings
+			# when logging on an API.
+			def str_prefix
+				# if Object.const_defined?("env")
+				# puts self.class.to_s.include? "Grape"
+				if self.class.to_s.include? "API" or self.class.to_s.start_with? "Grape"
+					# If we have a visit id assigned
+					return "#{(env["VISIT_ID"].to_s.strip.length > 0 ? "#{env["VISIT_ID"]}: " : "") }"
+				else
+					return ""
+				end
+			end
+
 			# def log(str)
 			# 		puts "#{str}" if Config.logging
 			# end
 
 			def last_transactions
-					last = Store.db.lrange(Transaction.db_list, 0, -1)
+				  Transaction.last_transactions
 			end
 
 			def request_info
@@ -77,20 +178,20 @@ module PRGMQ
 				"User: #{env["REMOTE_USER"].bold.yellow} (#{env["REMOTE_ADDR"].cyan})\n"+
 				"URI: #{env["REQUEST_URI"].bold.blue}\n"
 				output << "Method: "
-                                case env["REQUEST_METHOD"]
-                                     when "PUT"
-                                           output << env["REQUEST_METHOD"].bold.cyan
-					   output << " (Update)"
-                                     when "DELETE"
-                                           output << env["REQUEST_METHOD"].bold.red
-                                     when "GET"
-                                           output << env["REQUEST_METHOD"].bold.green
-                                     when "POST"
-                                           output << env["REQUEST_METHOD"].bold.magenta
-					   output << " (Create)"
-                                     else
-                                           output << env["REQUEST_METHOD"].bold.yellow
-                                end
+        case env["REQUEST_METHOD"]
+             when "PUT"
+                   output << env["REQUEST_METHOD"].bold.cyan
+							     output << " (Update)"
+             when "DELETE"
+                   output << env["REQUEST_METHOD"].bold.red
+             when "GET"
+                   output << env["REQUEST_METHOD"].bold.green
+             when "POST"
+                   output << env["REQUEST_METHOD"].bold.magenta
+							     output << " (Create)"
+             else
+                   output << env["REQUEST_METHOD"].bold.yellow
+        end
 				output << "\n"+
 				#"#{env.inspect}\n"+
 				"Time: #{Time.now.strftime("%m/%d/%Y - %r")}\n"
@@ -180,7 +281,7 @@ module PRGMQ
 					when 172001..518400 then "in #{((a+800)/(60*60*24)).to_i.to_s} days"
 					when 518401..1036800 then "in a week"
 					when 1036801..2433600 then "in #{((a+180000)/(60*60*24*7)).to_i.to_s} weeks"
-					else "in #{((a+180000)/(60*60*24*7) / 4).to_i.to_s} months"
+					else "in #{((a+180000)/(60*60*24*7) / 4).to_i.to_s} month(s)"
 				end
 			end
 
