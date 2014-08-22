@@ -29,3 +29,20 @@ Resque-Retry:
 ------------
 Resque while meeting all our requirements did not have built in retry by default. This is left to the user to implement. We identified a highly-active (commits to master ocurred just yesterday) project called Resque-Retry which as the capabilty for exponential backoff, a feature we were going to implement. Seeing as the project is stable, active and does exactly what we meant to do, we've incorporated it into our project. 
 
+About the Resque commmand:
+--------------------------
+
+Our Procfile contains a series of command that must run in order for this worker system to be online. Among those commands lies the resque command, which receives a series of parameters.
+
+TERM_CHILD
+---------- 
+TERM_CHILD tells Resque to pass SIGTERM from the parent to child process to ensure that all child worker process have time to execute an orderly shutdown.
+
+RESQUE_TERM_TIMEOUT
+-------------------
+The default period Resque waits before sending SIGKILL to its child processes is 4 seconds. To modify this value and give our workers more time to gracefully shutdown, modify the RESQUE_TERM_TIMEOUT environment variable, (ie RESQUE_TERM_TIMEOUT=7)
+
+QUEUE
+-----
+The name of Queue to be used. 
+

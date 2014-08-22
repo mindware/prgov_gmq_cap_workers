@@ -46,6 +46,7 @@ module PRGMQ
         "#{self.system_prefix}:#{self.db_prefix}"
       end
 
+      # This is redefined by the class.
       def self.queue_pending_prefix
         "pending"
       end

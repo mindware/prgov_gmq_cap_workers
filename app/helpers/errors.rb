@@ -1,91 +1,16 @@
 module PRGMQ
   module CAP
 
-    # We have an error middlware - our eye of sauron. It sees all errors:
-    # Trap all thrown Exception and fail gracefuly with a
-    # 500 and a proper message. This is done when something breaks in the
-    # code, and when basically it grabs any unexpected errors. All expected
-    # errors are now also caught by this middleware, instead of using
-    # grape's "error!" method, we now use raise which is more verbose and
-    # can return the current line and more information such as backtrace if
-    # our API Config helper has backtrace_errors set to true.
-    class ApiErrorHandler < Grape::Middleware::Base
-      # Needed for debug method.
-      include PRGMQ::CAP::LibraryHelper
+    # TODO:
+    # these are actually errors from the API. We might recode this file in the
+    # future. Ideas include when receiving an error from the API, checking
+    # if we have a class for tha error. Then the class Error could contain
+    # guides on how to proceed to handle such error.
+    # for the time being, we won't use it, if at any point we have something
+    # we need to throw, we'll delete everything here and create our own error
+    # class. something like: class DtopDownError < AppError.  Where AppError
+    # is our generic error class. class AppError < RuntimeError.  
 
-      def call!(env)
-        @env = env
-        begin
-          @app.call(@env)
-        rescue Exception => e
-          # Prepare the JSON error message.
-
-          # if this is one of our AppErrors, grab the custom error message.
-          # Store the class name as klass, so that we may call the proper
-          # http_code later on.
-          # Dev note: If is_a? ever fails, we always can use .ancestors.include?
-          if e.is_a? AppError
-            message = e.class.data
-            klass   = e.class
-          elsif e.is_a? Grape::Exceptions::ValidationErrors
-            klass   = InvalidParameters
-            message = InvalidParameters.data
-            message["error"]["app_error"] = "Invalid Parameters: #{e.message}"
-
-          # This next line doesn't contribute to making us completely Store
-          # agnostic. We need a specific check for the errors thrown by
-          # the drivers used by moneta. We're unable to catch these errors
-          # in the Store.rb's self.db method. If you figure it out, this
-          # line will not be needed. Until then, let's catch the errors
-          # here.
-          elsif e.is_a? Redis::BaseError
-            klass   = StoreUnavailable
-            message = StoreUnavailable.data
-          else
-            # For all other exceptions, use our generic error
-            puts "An #{e.class.to_s.bold.red} error was raised." if Config.debug
-            message = AppError.data
-            klass = AppError
-            message["error"]["app_exception_class"] = "#{e.class.to_s}"
-          end
-          # Sprinkle some additonal data if we're in development mode.
-          if Goliath.env.to_s == "development"
-            # # Add additional exception message, which will contain more
-            # # information if this is a system exception transformed into
-            # # AppError. We'll skip this if it's just a child of AppError,
-            # # since it wont contain new information like it does for
-            # # other exceptions.
-            # if klass == AppError
-            #   message["error"]["app_exception_error"]       = e.message
-            # end
-
-            # Add the message of the exception to all errors.
-            message["error"]["app_exception_message"] = "#{e.message}"
-            # If our Config helper is set to print backtrace errors, show them:
-            if(Config.backtrace_errors and Config.debug)
-              # Provide a full backtrace:
-              message["error"]["app_exception_backtrace"] = e.backtrace
-            else
-              # Provide a full backtrace:
-              message["error"]["app_exception_line"] = e.backtrace[0]
-            end
-          end # end of developer enviornment check
-
-          # Print to STDOUT the full errors if in debug mode.
-          error_msg "#{"Error".red}:\n#{message}" if Config.debug
-          # Print out dashes to make it easy to destinguish where our
-          # request output ends.
-          debug "#{ ("-" * 80).bold.yellow }\n"
-
-          # This throw not only ensures we throw the proper Exception,
-          # send the proper json error message, but also makes sure to
-          # return the proper HTTP code, be it a 500, 400, etc. 
-          throw :error, :message => message, :status => klass.http_code
-        end # end of begin/rescue
-      end # end of call(env)
-    end # end of error middlware
-
-    # Base Error, our Internal Server Error.
     class AppError < RuntimeError
       # data is the method used to return hashes with http and app errors.
       def self.data

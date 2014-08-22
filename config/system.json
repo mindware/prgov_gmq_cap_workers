@@ -1,11 +1,11 @@
 {
+  "environment"           : "development",
   "logging"               : true,
   "logs_max_bytes"        : 10024000,
   "logs_max_retention"    : 10,
   "debug"                 : true,
   "backtrace_errors"      : false,
   "display_results"       : true,
-  "display_certificates"  : false,
   "downtime"              : false,
-  "temp_dir"              : "/tmp/automata"
+  "temp_dir"              : "/tmp/gmq/"
 }

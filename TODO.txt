@@ -7,6 +7,8 @@ Project: Workers
 Pending:
 1. Create scheduler that deletes files from Config.temp_folder that are older than X amount of time. To clean up stale certificates.
 2. Load the admin website for resque-retry in Procfile
+3. Evaluate @backoff_strategy in the BaseWorker. Update it so that it lasts at least several months of attempts in exponential backoff.
+4. Break this into a GEM in the future. Also dont include libraries that arent really needed. Simplify transaction model in the future so that workers have a state machine a simple db representation they can interact with.
 
 ---
 Auto-generated using: github.com/mindware/todo

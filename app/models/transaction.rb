@@ -14,12 +14,16 @@
 # to track where a transaction is and where it is going next based on a
 # predetermined workflow.
 #
+# This is the version for the Workers. Workers would use this to create an
+# object representing a Transaction. They would receive the data from an API
+# and would load the data into the object to interact with it.
+#
 # Version v1:
 # Andrés Colón Pérez
 # Chief Technology Officer, Chief Security Officer
 # Office of the CIO (Giancarlo Gonzalez)
 # Government of Puerto Rico
-# May - 2014
+# Aug - 2014
 #
 module PRGMQ
   module CAP
@@ -27,8 +31,6 @@ module PRGMQ
       # We use both class and instance methods
       extend Validations
       include Validations
-      include TransactionIdFactory
-      extend TransactionIdFactory
       include LibraryHelper
 
       # Expiration: Transaction expiration means expiration from the DB
@@ -51,21 +53,27 @@ module PRGMQ
       # Transaction expiration is going to be performed at the Storage level.
       # This means if you ever manually restore a backup, in order to peer at
       # old transactions, such as for an audit, it is important that the time
-      # of the server is modified to the past in question, otherwise, the
+      # of the server be modified to the time of the backup, otherwise, the
       # storage system will see the time difference (Redis) and determine that
       # the transactions expiration time has come up, and immediately expire
       # data. This is because the storage mechanism that performs expiration of
       # keys does it using the current time. If you restore data from the past
       # into a server whose datetime is configured to the present or future,
       # expiration will come into effect for anythign that should be expired.
+      # This would have the effect that you know you're restoring data, but
+      # as soon as you peek at it, it's gone (expired).
       #
-      # If you set MONTHS_TO_EXPIRATION_OF_TRANSACTION to 0, transactions
-      # will never expire. (Hint: that could fill up the database store, be
-      # careful). Only do it if you know what you're doing or would like to get
+      # If you set MONTHS_TO_EXPIRATION_OF_TRANSACTION to 0, new transactions
+      # will never expire. (Hint: that could fill up the database store quickly
+      # leaving the server without RAM, it is **not** recommended, be very
+      # careful). Only do it if you know what you're doing, or are eager to get
       # fired. Seriously, don't do it.
+      #
       # By default, we use 1 or three months to keep the transaction in the
       # system for inspection. Once expired, it's really gone!
-      # Max is 25 years (25 * 12). Don't try it.
+      # Redis allows for a maximum of 25 years (25 * 12), but again, don't
+      # try it as the system will quickly store everything in ram and run out of
+      # it.
       MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
       # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:

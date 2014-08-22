@@ -10,11 +10,6 @@ module PRGMQ
         "stats"
       end
 
-      # ie: get get gmq:cap:stats:visits
-      def self.visits_prefix
-        "visits"
-      end
-
       def self.completed_prefix
         "completed"
       end
@@ -30,11 +25,6 @@ module PRGMQ
       ########################################
       #        Increments / Decrements       #
       ########################################
-
-      def self.add_visit(db_connection=nil)
-        db_connection = Store.db if db_connection.nil?
-        db_connection.incr("#{db_id}:#{visits_prefix}")
-      end
 
       # A transaction was completed
       def self.add_completed(db_connection=nil)
@@ -69,14 +59,9 @@ module PRGMQ
       # A connection will already be open
       # in those cases, and if we don't have the ability to reuse
       # the connection, we would risk accidentally eating all
-      # available connections, which could hang all access to the
-      # Store.
-
-      def self.visits(db_connection=nil)
-        db_connection = Store.db if db_connection.nil?
-        db_connection.get("#{db_id}:#{visits_prefix}")
-      end
-
+      # available connections, which could potentially hang our access to the
+      # Store, if we either run out of connections.
+      
       # A transaction was completed
       def self.completed(db_connection=nil)
         db_connection = Store.db if db_connection.nil?
