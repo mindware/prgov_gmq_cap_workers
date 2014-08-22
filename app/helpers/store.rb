@@ -59,13 +59,13 @@ module PRGMQ
               # First we choose the driver. By default we use the synchrony one.
               # If we weren't running on Eventmachine, we'd use a different one
               # such as hiredis
-              puts "Storage: connecting to #{Config.db_name} at #{Config.db_host}:#{Config.db_port} "+
-                   "(using #{Config.db_driver} driver with a pool_size of #{Config.db_pool_size})..."
-              @db = EventMachine::Synchrony::ConnectionPool.new(size: Config.db_pool_size) do
-                    Redis.new(:host =>   Config.db_host,
-                              :port =>   Config.db_port,
-                              :driver => Config.db_driver)
-              end
+              puts "Storage: connecting to #{Config.db_name} at "+
+                   "#{Config.db_host}:#{Config.db_port}..."
+              @db = Redis.new(:host =>   Config.db_host,
+                              :port =>   Config.db_port)
+              # Resque accepts an existing redis connection, so let's
+              # make it use ours.
+              Resque.redis = @db
           else
               @db
           end
