@@ -9,7 +9,7 @@ require 'rest_client'
 require "../../../app/helpers/library" 
 Dir["../../../app/helpers/*.rb"].each {|file| require file } 
 
-include PRGMQ::CAP::LibraryHelper	# General Helper Methods
+include GMQ::Workers::LibraryHelper	# General Helper Methods
 
 class Rest
 

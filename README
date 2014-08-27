@@ -12,7 +12,6 @@ What we needed:
 - Kill fat workers
 - Kill stale workers
 - Kill workers that are running too long
-- Keep Rails loaded / persistent workers
 - Distributed workers (run them on multiple machines)
 - Workers can watch multiple (or all) tags
 
@@ -45,4 +44,46 @@ The default period Resque waits before sending SIGKILL to its child processes is
 QUEUE
 -----
 The name of Queue to be used. 
+
+
+To start the web interface:
+---------------------------
+
+Resque-retry patches the resque-web interface. In order to run it, we've created a simple rack configuration (config.ru), which can be easily run with the following command: bundle exec rackup -p 9292 config.ru
+
+That loads the web interface with a few following additions (Scheduled, Delayed and Retry tabs). You can check it out at: http://localhost:9292
+
+
+Debugging errors:
+-----------------
+
+Using the redis-cli you can connect to redis. 
+The following are resque keys (since using keys *resque* is not safe in production), here they are:
+1) "resque:failed"
+2) "resque:stat:processed"
+3) "resque:queue:prgov_cap"
+4) "resque:stat:failed"
+
+We can check the resque:queue:prgov_cap key to see what type it is:
+> type resque:queue:prgov_cap
+list 
+
+This tells us the key is of type list. Let's print the last 10 items 
+> lrange resque:queue:prgov_cap 0 10 
+1) ""
+2) ""
+3) ""
+4) "{\"class\":{},\"args\":[\"028639abedc7445a7a1d04154454bf0d9\",{\"queued_at\":\"2014-08-26 06:13:12 UTC\"}]}"
+
+In order to delete all item matching a string, we could use LREM:
+> lrem resque:queue:prgov_cap 0 "{\"class\":{},\"args\":[\"028639abedc7445a7a1d04154454bf0d9\",{\"queued_at\":\"2014-08-26 06:13:12 UTC\"}]}" 
+(integer) 1 
+
+This means it was deleted:
+> lrange resque:queue:prgov_cap 0 10
+1) ""
+2) ""
+3) ""
+
+
 

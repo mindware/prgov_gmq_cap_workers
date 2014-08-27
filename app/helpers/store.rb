@@ -1,11 +1,8 @@
 # Load our external storage libraries
-require 'em-synchrony'                       # Fiber aware connection pools
 require 'redis'				  										 # use redis
-require 'redis/connection/synchrony'         # use the asynchronous driver
 
-
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     # The Store class is not meant to be an instance. We use this
     # class and its methods to pool connections to specific Store,
     # thus making more efficient use of said connections.
@@ -63,9 +60,6 @@ module PRGMQ
                    "#{Config.db_host}:#{Config.db_port}..."
               @db = Redis.new(:host =>   Config.db_host,
                               :port =>   Config.db_port)
-              # Resque accepts an existing redis connection, so let's
-              # make it use ours.
-              Resque.redis = @db
           else
               @db
           end

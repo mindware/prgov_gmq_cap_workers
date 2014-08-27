@@ -25,9 +25,12 @@
 # Government of Puerto Rico
 # Aug - 2014
 #
-module PRGMQ
-  module CAP
-    class Transaction < PRGMQ::CAP::Base
+require 'app/models/base'
+require 'app/helpers/validations'
+
+module GMQ
+  module Workers
+    class Transaction < GMQ::Workers::Base
       # We use both class and instance methods
       extend Validations
       include Validations

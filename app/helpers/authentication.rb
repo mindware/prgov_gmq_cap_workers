@@ -1,7 +1,7 @@
 require 'digest/md5'
 
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     class Authentication
 
         # Finds a user by system name

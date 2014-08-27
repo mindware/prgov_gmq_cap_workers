@@ -1,5 +1,5 @@
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     class User
         attr_reader :username, :password, :application
 

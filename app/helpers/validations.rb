@@ -6,8 +6,8 @@ require 'base64'                 # used to validate certificates
 
 # A module for methods used to validate data, such as valid
 # transaction parameters, social security numbers, emails and the like.
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     module Validations
         ########################################
         ##            Constants:               #

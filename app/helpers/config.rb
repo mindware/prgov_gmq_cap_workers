@@ -1,7 +1,8 @@
+require 'app/helpers/colorize'
 require 'json'
 
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
       class Config
 
           class << self
@@ -10,7 +11,7 @@ module PRGMQ
                           :debug,   # This tells us if we're in debugging mode
                           :downtime,# determines if we're in maintainance
                           :logging, # determines if we're logging
-                          :logger,  # returns the logger object. STDOUT if not logging
+                          :logger   # returns the logger object. STDOUT if not logging
               attr_writer :downtime # This setter lets us go into maintainance mode
           end
 
@@ -101,7 +102,19 @@ module PRGMQ
             		      print "System settings:"# if @debug
                 		  list = ""
                 		  @all["system"].each do |key, value|
-                			    list << " #{key.green}: #{value.to_s.bold.green},"
+                          # if we have a hash inside the hash
+                          if value.class == Hash
+                             list << " #{key.green} -> "
+                             value.each do |k, v|
+                               if k.to_s.downcase == "password"
+                                  list << " #{k}: #{"<not shown>".gray}"
+                               else
+                                  list << " #{k}: #{v.to_s.bold.cyan},"
+                               end
+                             end
+                          else
+                			         list << " #{key.green}: #{value.to_s.bold.green},"
+                          end
                 		  end
                 		  # print the list, but remove the last character (,)
                 		  puts list.chop.scan(/.{1,151}/m)

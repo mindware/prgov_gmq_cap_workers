@@ -1,27 +1,23 @@
 module GMQ
   module Workers
 
-    # TODO:
-    # these are actually errors from the API. We might recode this file in the
-    # future. Ideas include when receiving an error from the API, checking
-    # if we have a class for tha error. Then the class Error could contain
-    # guides on how to proceed to handle such error.
-    # for the time being, we won't use it, if at any point we have something
-    # we need to throw, we'll delete everything here and create our own error
-    # class. something like: class DtopDownError < AppError.  Where AppError
-    # is our generic error class. class AppError < RuntimeError.
-
-    class AppError < RuntimeError
+    # Base Error, our Internal Server Error.
+    class WorkerError < RuntimeError
+      attr_reader :http_error, :http_code, :worker_error, :app_code
       # data is the method used to return hashes with http and app errors.
       def self.data
         # sprinkle some errors and print the Exception name with self.to_s
-        {"error" => { "http_error" => "An Internal Server Error ocurred",
+        {"error" => { "http_error" => http_error,
                       "http_code" => 500,
-                      "app_error" => "An unexpected internal error "+
+                      "worker_error" => "An unexpected internal error "+
                                      "has occurred.",
                       "app_code" => 6000
                     }
         }
+      end
+
+      def http_error
+        "An Internal Server Error ocurred"
       end
       # This method is used to retrieve the http error code.
       def self.http_code
@@ -39,132 +35,132 @@ module GMQ
     ########                   Missing                      ########
     ################################################################
 
-    class MissingTransactionId < GMQ::Workers::AppError
+    class MissingTransactionId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: id is required.",
+                       "worker_error" => "Parameter: id is required.",
                        "app_code" => 1000
                     }
         }
       end
     end
 
-    class MissingEmail < GMQ::Workers::AppError
+    class MissingEmail < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: email is required.",
+                       "worker_error" => "Parameter: email is required.",
                        "app_code" => 1001
                     }
         }
       end
     end
 
-    class MissingCertificateBase64 < GMQ::Workers::AppError
+    class MissingCertificateBase64 < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: certificate_base64 is required.",
+                       "worker_error" => "Parameter: certificate_base64 is required.",
                        "app_code" => 1002
                     }
         }
       end
     end
 
-    class MissingSSN < GMQ::Workers::AppError
+    class MissingSSN < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: ssn is required.",
+                       "worker_error" => "Parameter: ssn is required.",
                        "app_code" => 1003
                     }
         }
       end
     end
 
-    class MissingLicenseNumber < GMQ::Workers::AppError
+    class MissingLicenseNumber < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: license_number is required.",
+                       "worker_error" => "Parameter: license_number is required.",
                        "app_code" => 1004
                     }
         }
       end
     end
 
-    class MissingFirstName < GMQ::Workers::AppError
+    class MissingFirstName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: first_name is required.",
+                       "worker_error" => "Parameter: first_name is required.",
                        "app_code" => 1005
                     }
         }
       end
     end
 
-    class MissingLastName < GMQ::Workers::AppError
+    class MissingLastName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: last_name is required.",
+                       "worker_error" => "Parameter: last_name is required.",
                        "app_code" => 1006
                     }
         }
       end
     end
 
-    class MissingBirthDate < GMQ::Workers::AppError
+    class MissingBirthDate < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: birth_date is required.",
+                       "worker_error" => "Parameter: birth_date is required.",
                        "app_code" => 1007
                     }
         }
       end
     end
 
-    class MissingResidency < GMQ::Workers::AppError
+    class MissingResidency < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: residency is required.",
+                       "worker_error" => "Parameter: residency is required.",
                        "app_code" => 1008
                     }
         }
       end
     end
 
-    class MissingClientIP < GMQ::Workers::AppError
+    class MissingClientIP < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: Client's IP is required.",
+                       "worker_error" => "Parameter: Client's IP is required.",
                        "app_code" => 1009
                     }
         }
       end
     end
 
-    class MissingStatus < GMQ::Workers::AppError
+    class MissingStatus < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: status is required.",
+                       "worker_error" => "Parameter: status is required.",
                        "app_code" => 1010
                     }
         }
       end
     end
 
-    class MissingReason < GMQ::Workers::AppError
+    class MissingReason < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: reason is required.",
+                       "worker_error" => "Parameter: reason is required.",
                        "app_code" => 1011
                     }
         }
@@ -172,22 +168,22 @@ module GMQ
     end
 
 
-    class MissingAnalystApprovalDate < GMQ::Workers::AppError
+    class MissingAnalystApprovalDate < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: analyst_approval_datetime is"+
+                       "worker_error" => "Parameter: analyst_approval_datetime is"+
                                       " required.",
                        "app_code" => 1012
                     }
         }
       end
     end
-    class MissingAnalystTransactionId < GMQ::Workers::AppError
+    class MissingAnalystTransactionId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: analyst_transaction_id is"+
+                       "worker_error" => "Parameter: analyst_transaction_id is"+
                                       " required.",
                        "app_code" => 1013
                     }
@@ -195,11 +191,11 @@ module GMQ
       end
     end
 
-    class MissingAnalystInternalStatusId < GMQ::Workers::AppError
+    class MissingAnalystInternalStatusId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: analyst_internal_status_id "+
+                       "worker_error" => "Parameter: analyst_internal_status_id "+
                                       "is required.",
                        "app_code" => 1014
                     }
@@ -207,11 +203,11 @@ module GMQ
       end
     end
 
-    class MissingAnalystDecisionCode < GMQ::Workers::AppError
+    class MissingAnalystDecisionCode < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: decision_code "+
+                       "worker_error" => "Parameter: decision_code "+
                                       "is required.",
                        "app_code" => 1015
                     }
@@ -219,11 +215,11 @@ module GMQ
       end
     end
 
-    class MissingAnalystId < GMQ::Workers::AppError
+    class MissingAnalystId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: analyst_id "+
+                       "worker_error" => "Parameter: analyst_id "+
                                       "is required.",
                        "app_code" => 1016
                     }
@@ -231,11 +227,11 @@ module GMQ
       end
     end
 
-    class MissingAnalystFullname < GMQ::Workers::AppError
+    class MissingAnalystFullname < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: analyst_fullname "+
+                       "worker_error" => "Parameter: analyst_fullname "+
                                       "is required.",
                        "app_code" => 1017
                     }
@@ -243,11 +239,11 @@ module GMQ
       end
     end
 
-    class MissingLanguage < GMQ::Workers::AppError
+    class MissingLanguage < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Parameter: language "+
+                       "worker_error" => "Parameter: language "+
                                       "is required.",
                        "app_code" => 1018
                     }
@@ -260,33 +256,33 @@ module GMQ
     ########                   Invalid                      ########
     ################################################################
 
-    class InvalidTransactionId < GMQ::Workers::AppError
+    class InvalidTransactionId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid transaction id provided.",
+                       "worker_error" => "Invalid transaction id provided.",
                        "app_code" => 2000
                     }
         }
       end
     end
 
-    class InvalidEmail < GMQ::Workers::AppError
+    class InvalidEmail < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid email provided.",
+                       "worker_error" => "Invalid email provided.",
                        "app_code" => 2001
                     }
         }
       end
     end
 
-    class InvalidStatus < GMQ::Workers::AppError
+    class InvalidStatus < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid transaction status. A valid "+
+                       "worker_error" => "Invalid transaction status. A valid "+
                        "transaction status is one of the following: completed,"+
                        " pending, retry, processing, failed.",
                        "app_code" => 2002
@@ -295,44 +291,44 @@ module GMQ
       end
     end
 
-    class InvalidSSN < GMQ::Workers::AppError
+    class InvalidSSN < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid ssn provided.",
+                       "worker_error" => "Invalid ssn provided.",
                        "app_code" => 2002
                     }
         }
       end
     end
 
-    class InvalidSSN < GMQ::Workers::AppError
+    class InvalidSSN < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid ssn provided.",
+                       "worker_error" => "Invalid ssn provided.",
                        "app_code" => 2003
                     }
         }
       end
     end
 
-    class InvalidLicenseNumber < GMQ::Workers::AppError
+    class InvalidLicenseNumber < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid license_number provided.",
+                       "worker_error" => "Invalid license_number provided.",
                        "app_code" => 2004
                     }
         }
       end
     end
 
-    class InvalidFirstName < GMQ::Workers::AppError
+    class InvalidFirstName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid name provided.",
+                       "worker_error" => "Invalid name provided.",
                        "app_code" => 2005
                     }
         }
@@ -340,110 +336,110 @@ module GMQ
     end
 
 
-    class InvalidBirthDate < GMQ::Workers::AppError
+    class InvalidBirthDate < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid birth_date provided.",
+                       "worker_error" => "Invalid birth_date provided.",
                        "app_code" => 2006
                     }
         }
       end
     end
 
-    class InvalidResidency < GMQ::Workers::AppError
+    class InvalidResidency < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid residency provided.",
+                       "worker_error" => "Invalid residency provided.",
                        "app_code" => 2007
                     }
         }
       end
     end
 
-    class InvalidClientIP < GMQ::Workers::AppError
+    class InvalidClientIP < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid Client IP provided.",
+                       "worker_error" => "Invalid Client IP provided.",
                        "app_code" => 2008
                     }
         }
       end
     end
 
-    class InvalidReason < GMQ::Workers::AppError
+    class InvalidReason < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid reason provided.",
+                       "worker_error" => "Invalid reason provided.",
                        "app_code" => 2009
                     }
         }
       end
     end
 
-    class InvalidCertificateBase64 < GMQ::Workers::AppError
+    class InvalidCertificateBase64 < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid certificate_base64 provided.",
+                       "worker_error" => "Invalid certificate_base64 provided.",
                        "app_code" => 2010
                     }
         }
       end
     end
 
-    class InvalidMiddleName < GMQ::Workers::AppError
+    class InvalidMiddleName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid middle name provided.",
+                       "worker_error" => "Invalid middle name provided.",
                        "app_code" => 2011
                     }
         }
       end
     end
 
-    class InvalidLastName < GMQ::Workers::AppError
+    class InvalidLastName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid last name provided.",
+                       "worker_error" => "Invalid last name provided.",
                        "app_code" => 2012
                     }
         }
       end
     end
 
-    class InvalidMotherLastName < GMQ::Workers::AppError
+    class InvalidMotherLastName < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid mother last name provided.",
+                       "worker_error" => "Invalid mother last name provided.",
                        "app_code" => 2013
                     }
         }
       end
     end
 
-    class NotOldEnough < GMQ::Workers::AppError
+    class NotOldEnough < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Cannot issue a certificate for minors.",
+                       "worker_error" => "Cannot issue a certificate for minors.",
                        "app_code" => 2014
                     }
         }
       end
     end
 
-    class InvalidAnalystApprovalDate < GMQ::Workers::AppError
+    class InvalidAnalystApprovalDate < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid analyst_approval_date. You must"+
+                       "worker_error" => "Invalid analyst_approval_date. You must"+
                                       " supply a valid utc timestamp (example:"+
                                       " 2014-05-29 13:23:39 UTC).",
                        "app_code" => 2015
@@ -452,44 +448,44 @@ module GMQ
       end
     end
 
-    class InvalidAnalystDecisionCode < GMQ::Workers::AppError
+    class InvalidAnalystDecisionCode < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid decision_code provided.",
+                       "worker_error" => "Invalid decision_code provided.",
                        "app_code" => 2016
                     }
         }
       end
     end
 
-    class InvalidAnalystId < GMQ::Workers::AppError
+    class InvalidAnalystId < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid analyst_id provided.",
+                       "worker_error" => "Invalid analyst_id provided.",
                        "app_code" => 2017
                     }
         }
       end
     end
 
-    class InvalidAnalystFullname < GMQ::Workers::AppError
+    class InvalidAnalystFullname < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid analyst_fullname provided.",
+                       "worker_error" => "Invalid analyst_fullname provided.",
                        "app_code" => 2018
                     }
         }
       end
     end
 
-    class InvalidLanguage < GMQ::Workers::AppError
+    class InvalidLanguage < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid language provided.",
+                       "worker_error" => "Invalid language provided.",
                        "app_code" => 2019
                     }
         }
@@ -501,11 +497,11 @@ module GMQ
     ################################################################
 
 
-    class InvalidCredentials < GMQ::Workers::AppError
+    class InvalidCredentials < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "401 Unauthorized",
                        "http_code" => 401,
-                       "app_error" => "Unauthorized: Username or "+
+                       "worker_error" => "Unauthorized: Username or "+
                                      "password is incorrect.",
                        "app_code" => 4000
                     }
@@ -513,11 +509,11 @@ module GMQ
       end
     end
 
-    class InvalidAccess < GMQ::Workers::AppError
+    class InvalidAccess < GMQ::Workers::WorkerError
       def self.data
         { "error" => {  "http_error" => "403 Forbidden",
                         "http_code" => 403 ,
-                        "app_error" => "Forbidden: Your credentials do"+
+                        "worker_error" => "Forbidden: Your credentials do"+
                         " not allow you access to that resource.",
                         "app_code" => 4500
                     }
@@ -525,11 +521,11 @@ module GMQ
       end
     end
 
-    class InvalidParameters < GMQ::Workers::AppError
+    class InvalidParameters < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_error" => "400 Bad Request",
                        "http_code" => 400,
-                       "app_error" => "Invalid Parameters",
+                       "worker_error" => "Invalid Parameters",
                        "app_code" => 2999
                     }
         }
@@ -541,11 +537,11 @@ module GMQ
     ########                 Not Found                      ########
     ################################################################
 
-    class ResourceNotFound < GMQ::Workers::AppError
+    class ResourceNotFound < GMQ::Workers::WorkerError
       def self.data
         { "error" => {  "http_error" => "404 Not Found",
                         "http_code" => 404,
-                        "app_error" => "The resource"+
+                        "worker_error" => "The resource"+
                         " provided in the URL doesn't exist. Check the API "+
                         "documentation and version for valid URL resources "+
                         "and their corresponding HTTP verbs (ie: GET, PUT, "+
@@ -556,11 +552,11 @@ module GMQ
       end
     end
 
-    class ItemNotFound < GMQ::Workers::AppError
+    class ItemNotFound < GMQ::Workers::WorkerError
       def self.data
         { "error" => {  "http_error" => "404 Not Found",
                         "http_code" => 404,
-                        "app_error" => "The requested item could not be found."+
+                        "worker_error" => "The requested item could not be found."+
                         " The item might've expired, been deleted or may have "+
                         "never existed.",
                         "app_code" => 5001
@@ -574,11 +570,11 @@ module GMQ
     ########               Internal Errors                  ########
     ################################################################
 
-    class InvalidAccessGroup < GMQ::Workers::AppError
+    class InvalidAccessGroup < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "Internal Server Error: The user has an "+
+                       "worker_error"  => "Internal Server Error: The user has an "+
                        "improperly configured access group. "+
                        "The administrator needs to set a proper array as a "+
                        "data structure for the access group.",
@@ -588,11 +584,11 @@ module GMQ
       end
     end
 
-    class MissingConfigFile < GMQ::Workers::AppError
+    class MissingConfigFile < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "The configuration file is missing or "+
+                       "worker_error"  => "The configuration file is missing or "+
                                        "access to it is unavailable",
                        "app_code" => 6002
                     }
@@ -600,11 +596,11 @@ module GMQ
       end
     end
 
-    class InvalidConfigFile < GMQ::Workers::AppError
+    class InvalidConfigFile < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "The API's configuration file is "+
+                       "worker_error"  => "The API's configuration file is "+
                                        "invalid and could not be parsed.",
                        "app_code" => 6003
                     }
@@ -612,11 +608,11 @@ module GMQ
       end
     end
 
-    class MissingAccessGroup < GMQ::Workers::AppError
+    class MissingAccessGroup < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "The user's config is missing "+
+                       "worker_error"  => "The user's config is missing "+
                                        "a security group.",
                        "app_code" => 6004
                     }
@@ -624,11 +620,11 @@ module GMQ
       end
     end
 
-    class InvalidPasskeyLength < GMQ::Workers::AppError
+    class InvalidPasskeyLength < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "The system configured passkey for "+
+                       "worker_error"  => "The system configured passkey for "+
                                     "the user is of an invalid length.",
                        "app_code" => 6005
                     }
@@ -636,11 +632,11 @@ module GMQ
       end
     end
 
-    class InvalidNonJsonRecord < GMQ::Workers::AppError
+    class InvalidNonJsonRecord < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "The record found "+
+                       "worker_error"  => "The record found  "+
                        "was in an improper format and could not be "+
                        "properly parsed.",
                        "app_code" => 6006
@@ -649,14 +645,14 @@ module GMQ
       end
     end
 
-    class InvalidErrorProvided < GMQ::Workers::AppError
+    class InvalidErrorProvided < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "500 Internal Server Error",
                        "http_code" => 500,
-                       "app_error"  => "An invalid error was raised. This is "+
+                       "worker_error"  => "An invalid error was raised. This is "+
                        "a programming error. Someone raised an error but did "+
                        "not properly define it for the API, as children of "+
-                       "the AppError class.",
+                       "the WorkerError class.",
                        "app_code" => 6106
                     }
         }
@@ -669,11 +665,11 @@ module GMQ
     ################################################################
 
 
-    class GMQUnavailable < GMQ::Workers::AppError
+    class GMQUnavailable < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "502 Internal Server Error",
                        "http_code" => 502,
-                       "app_error"  => "The Government Message "+
+                       "worker_error"  => "The Government Message "+
                                        "Queue could not be accessed.",
                        "app_code" => 7000
                     }
@@ -681,11 +677,11 @@ module GMQ
       end
     end
 
-    class StoreUnavailable < GMQ::Workers::AppError
+    class StoreUnavailable < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "502 Internal Server Error",
                        "http_code" => 502,
-                       "app_error"  => "The Transaction Store could not be "+
+                       "worker_error"  => "The Transaction Store could not be "+
                                        "accessed.",
                        "app_code" => 7001
                     }
@@ -697,11 +693,11 @@ module GMQ
     ########            Down for Maintenance                ########
     ################################################################
 
-    class ServiceUnavailable < GMQ::Workers::AppError
+    class ServiceUnavailable < GMQ::Workers::WorkerError
       def self.data
         { "error" => { "http_message" => "503 Service Unavailable",
                        "http_code" => 503,
-                       "app_error"  => "This service is currently "+
+                       "worker_error"  => "This service is currently "+
                                        "unavailable. Down for maintenance.",
                        "app_code" => 8000
                     }

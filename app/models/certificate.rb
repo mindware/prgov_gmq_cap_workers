@@ -1,10 +1,10 @@
 # Model that can take a base64 file and dump it into a pdf
 require 'base64'
 
-module PRGMQ
-	module CAP
+module GMQ
+	module Workers
 		class Certificate
-			include PRGMQ::CAP::LibraryHelper
+			include GMQ::Workers::LibraryHelper
 			attr_accessor :file
 
 			# Determines wether this certificate contains decoded data.

@@ -1,6 +1,6 @@
-module PRGMQ
-  module CAP
-    class TransactionMachine < PRGMQ::CAP::Base
+module GMQ
+  module Workers
+    class TransactionMachine < GMQ::Workers::Base
       include AASM           # use the act as state machine gem
 
       PRGOV_FROM_ADDRESS = "noreply@pr.gov"

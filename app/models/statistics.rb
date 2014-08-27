@@ -1,5 +1,5 @@
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     class Stats
 
       ########################################

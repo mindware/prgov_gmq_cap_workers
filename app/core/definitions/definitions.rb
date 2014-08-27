@@ -18,9 +18,9 @@ class API
   end
 end
 
-# Hack to define the PRGMQ::CAP::Grape used by helpers/errors.rb 
-module PRGMQ 
-	module CAP
+# Hack to define the GMQ::Workers::Grape used by helpers/errors.rb 
+module GMQ 
+	module Workers
 		module Grape
 			module Middleware
 				class Base

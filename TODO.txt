@@ -9,6 +9,11 @@ Pending:
 2. Load the admin website for resque-retry in Procfile
 3. Evaluate @backoff_strategy in the BaseWorker. Update it so that it lasts at least several months of attempts in exponential backoff.
 4. Break this into a GEM in the future. Also dont include libraries that arent really needed. Simplify transaction model in the future so that workers have a state machine a simple db representation they can interact with.
+5. DEPRECATION WARNING: Resque::Worker verbose and very_verbose are deprecated. Please set Resque.logger.level instead
+6. Si redis se cae se cae todo el Foreman: workers website scheduler
+7. Si redis se cae se cae todo el Foreman: workers website scheduler - hacer para tener un process que lo restartea todo al regresar la conexión
+8. Update the Port for TWEMPROXY in db.json for both API and GMQ worker
+9. Update redis.conf for redis1 so that it uses default port
 
 ---
 Auto-generated using: github.com/mindware/todo

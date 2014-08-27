@@ -1,0 +1,23 @@
+{
+  "driver"  : "synchrony",
+  "servers" : {
+              "nutcracker01"  : {
+                              "user"     : "",
+                              "password" : "",
+                              "host"     : "localhost",
+                              "port"	   : 5000
+              },
+              "redis01"  : {
+                              "user"     : "user1",
+                              "password" : "password1",
+                              "host"     : "localhost",
+                              "port"	   : 6379
+              },
+              "redis02" :  {
+                              "user"     : "user2",
+                              "password" : "password2",
+                              "host"     : "localhost",
+        		                  "port"	   : 6380
+              }
+  }
+}

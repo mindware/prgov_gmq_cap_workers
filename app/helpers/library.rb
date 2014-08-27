@@ -1,6 +1,6 @@
 # Andrés Colón Pérez - office of the CIO 2014
-module PRGMQ
-	module CAP
+module GMQ
+	module Workers
 		module LibraryHelper
 
 			def logger

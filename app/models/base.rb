@@ -8,8 +8,8 @@
 # which as an example, could translate to:
 # ie: gmq:cap:list:01
 
-module PRGMQ
-  module CAP
+module GMQ
+  module Workers
     class Base
 
       attr_accessor :id

@@ -3,3 +3,7 @@
 /config/users.json
 passwords.list
 stdout
+*.log
+*.bk
+*.pdf
+.DS_Store
