@@ -6,12 +6,12 @@ require 'app/models/transaction'
 
 module GMQ
   module Workers
-    class EmailWorker < GMQ::Workers::BaseWorker
+    class FinalEmailWorker < GMQ::Workers::BaseWorker
 
       def self.perform(*args)
-
         payload = args[0]
-        if payload.has_key? "text_message" or payload.has_key["html_message"]
+        if payload.has_key? "text" or payload.has_key? "html"
+          logger.info "#{self.class} requested for #{payload["id"]}"
 
           # Let's fetch the transaction from the Data Store.
           # The following line returns GMQ::Workers::TransactionNotFound
@@ -28,6 +28,27 @@ module GMQ
 
           # Use our GMQ Mailer class to mail the payload.
           Mailer.mail_payload(payload)
+
+          # IMPORTANT THINGS TODO HERE!
+          # TODO We should check here how the transaction ended in this final
+          # email. Did things go ok? Did things go astray? Note it down update
+          # the status, state and stats.
+          #
+          # if (something bad happened)
+          #  <do something / update>
+          # else
+            # Everything went fine:
+            # Close the transaction
+            logger.info "Mail sent. Updating transaction state and statistics."
+            # transaction.status = "completed"
+            # transaction.state = "finished"
+            # transaction.save
+            # update statistics
+            # TODO ideally all of this will be done against the API instead of
+            # directly into the DB
+            # add_completed
+          # end
+
         else
           puts "\n\nNO PAYLOAD #{payload}\n\n"
           raise StandardError, "No text_message or html_message in email"

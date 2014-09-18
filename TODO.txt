@@ -14,10 +14,18 @@ Pending:
 7. Si redis se cae se cae todo el Foreman: workers website scheduler - hacer para tener un process que lo restartea todo al regresar la conexión
 8. Update the Port for TWEMPROXY in db.json for both API and GMQ worker
 9. Update redis.conf for redis1 so that it uses default port
-10. Dont retry RapsheetWorker or any worker if tx ID is not found. If it is invalid.
-11. Update db.json in production to use nutcracker.
-12. rapsheetworker: do not retry if LocalTransactionNotFound
-13. Check to see if transactions are repeating themselves in a single request.
+10. Update db.json in production to use nutcracker.
+11. Check to see if transactions are repeating themselves in a single request.
+12. Create a share for all worker servers, where we can create certificates and pdfs
+13. LocalTransactionNotFound should not be a candiate for a retry
+14. If the configured system temp_folder doesnt exist create it
+15. Checksum all files that we put in OGP
+16. worker actions against DB should be against API - stats - transaction updates - library helpers
+17. figure out why finalemailworker is showing the full payload on the verbose mode in resque
+Done:
+1. rapsheetworker: do not retry if LocalTransactionNotFound
+2. Dont retry RapsheetWorker or any worker if tx ID is not found. If it is invalid.
+3. MissingTransactionId should not be an error candidate for a retry.
 
 ---
 Auto-generated using: github.com/mindware/todo

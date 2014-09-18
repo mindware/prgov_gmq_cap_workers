@@ -17,5 +17,10 @@ gem 'resque', "~> 1.25.2"
 gem 'resque-scheduler', "~> 3.0" 
 gem 'resque-retry'
 
+gem 'rest_client', "~> 1.7.3"
+
 # Email:
 gem 'mail'
+
+# for safely decoding and encoding strings to HTML
+gem 'htmlentities', '~> 4.3.2'

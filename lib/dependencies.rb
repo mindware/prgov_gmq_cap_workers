@@ -8,6 +8,9 @@
 require 'resque'
 require 'resque-scheduler'
 require 'resque-retry'
+require 'dotenv'
+# Load our environment variables from the hidden '.env' file in this projects root folder.
+Dotenv.load
 
 require 'app/helpers/config'
 require 'app/helpers/store'
@@ -24,3 +27,12 @@ Resque.redis = GMQ::Workers::Store.db
 # We'll require all existing workers in the core/workers directory
 # These are used both by the Resque workers as well as the Resque-web
 Dir["app/core/workers/*.rb"].each {|file| require file }
+
+# Set the logger
+# Resque supports any Logger that is a duck type of the Ruby standard library's built-in Logger class. By default Resque will log to STDOUT. We can configure it to use our logger
+# More options: https://github.com/resque/resque/wiki/Logging
+#Resque.logger = GMQ::Workers::Config.logger
+#Resque.logger = Logger.new
+Resque.logger.level = Logger::DEBUG
+# During production, you may want to set it to:
+#Resque.logger.level = Logger::INFO

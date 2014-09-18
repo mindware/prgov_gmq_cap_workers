@@ -1,3 +1,4 @@
+require 'htmlentities'
 # The transaction class is the Object that represents a transaction as it is
 # stored in the database. It uses the Base class, which holds the basic
 # methods for representing the way keys are stored in the data Store (db).
@@ -14,20 +15,15 @@
 # to track where a transaction is and where it is going next based on a
 # predetermined workflow.
 #
-# This is the version for the Workers. Workers would use this to create an
-# object representing a Transaction. They would receive the data from an API
-# and would load the data into the object to interact with it.
-#
 # Version v1:
 # Andrés Colón Pérez
 # Chief Technology Officer, Chief Security Officer
 # Office of the CIO (Giancarlo Gonzalez)
 # Government of Puerto Rico
-# Aug - 2014
+# May - 2014
 #
 require 'app/models/base'
 require 'app/helpers/validations'
-
 module GMQ
   module Workers
     class Transaction < GMQ::Workers::Base
@@ -36,14 +32,24 @@ module GMQ
       include Validations
       include LibraryHelper
 
-      # Expiration: Transaction expiration means expiration from the DB
-      # as in, disappearing from the system entirely.
+      # A note on the expiration of transactions:
+      # Transaction expiration means expiration from the DB
+      # as in, disappearing from the system entirely. The system has been
+      # designed to expire Transactions after time. The backup strategy
+      # implemented by the system administrators will determine the longrevity
+      # of the data in an alternate medium, and such will be the strategy for
+      # compliance for audits that span a period of time longer than the
+      # maximum retention of this system. An alternate archival strategy
+      # could be implemented where transactions are stored in an alternate
+      # database for inspection, but this is left as an exercise for a future
+      # version of the system.
       #
-      # This shouldn't be confused with the expiration of a certificate.
-      # A certificate could be invalidated by the PR.Gov validation system
-      # even if its transaction still hasn't expired. For example, say it has
+      # Transaction Expiration vs Certificate Expiration:
+      # Transaction expiration shouldn't be confused with that of a certificate.
+      # A certificate could be invalidated by the PR.Gov's validation system
+      # even if the transaction still hasn't expired. For example, say it has
       # been determined that a certificate shouldn't be valid after 1 month,
-      # in such a case PR.Gov validation mechanism could check the transaction
+      # in such a case PR.Gov's validation mechanism could check the transaction
       # approval date and see if it has already reached its certificate
       # expiration limit. However, the Transaction expiration might still not
       # have come into effect, and thus, we could have the ability to peer into
@@ -72,12 +78,13 @@ module GMQ
       # careful). Only do it if you know what you're doing, or are eager to get
       # fired. Seriously, don't do it.
       #
-      # By default, we use 1 or three months to keep the transaction in the
-      # system for inspection. Once expired, it's really gone!
-      # Redis allows for a maximum of 25 years (25 * 12), but again, don't
-      # try it as the system will quickly store everything in ram and run out of
-      # it.
-      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
+      # By default, we recomend 1 or three months to keep the transaction in the
+      # system for inspection after it has become idle. Once expired, it's
+      # really gone. Redis allows for a maximum of 25 years (25 * 12), but
+      # again, don't try it as the system will quickly store everything in ram
+      # and run out of it. If a transaction is touched (ie, updated in anyway)
+      # its time to live (TTL) will reset.
+      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 6
       # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:
       # 604800 seconds in a week X 4 weeks = 1 month in seconds
@@ -85,9 +92,7 @@ module GMQ
       # can last before expiring.
       EXPIRATION = (604800 * 4) * MONTHS_TO_EXPIRATION_OF_TRANSACTION
 
-
       LAST_TRANSACTIONS_TO_KEEP_IN_CACHE = 50
-
 
       ######################################################
       # A transaction generally consists of the following: #
@@ -207,7 +212,7 @@ module GMQ
           tx.created_at          = Time.now.utc
           tx.status              = "received"
           tx.location            = "PR.gov GMQ"
-          tx.state               = :started
+          tx.state               = :new
 
           # Pending stuff that we've yet to develop:
           # tx["history"]           = { "received" => { Time.now }}
@@ -389,7 +394,7 @@ module GMQ
           # end
 
           if(!data = Store.db.get(db_id(id)))
-            raise ItemNotFound
+            raise TransactionNotFound
           else
             begin
               # grab the JSON from this transaction id
@@ -413,16 +418,124 @@ module GMQ
           Store.db.lrange(Transaction.db_list, 0, -1)
       end
 
+      # Generates a full name based on aggregating transaction citizen name data
+      def full_name
+          name = first_name # required
+          name << " #{middle_name}" if !middle_name.nil?
+          name << " #{last_name}" # required
+          name << " #{mother_last_name}" if !mother_last_name.nil?
+      end
 
-      # This method returns the data stored for a worker's job
-      def job_data
-        # "#{db_id}:#{Time.now.utc.to_i}"
-        '{ "class" : "Worker", "args" : ["arg1"]}'
+
+      # This method returns a proper Resque Job JSON.
+      # Instead of using the official Resque enqueue method, which uses its
+      # own database connection, we directly talk to Redis and place a job
+      # JSON, built by this method, for Resque to grab in the Transaction's save
+      # method. We read Resque's source-code and identified the standard for
+      # placing Jobs in the queue (File lib/resque/job.rb, line 38 and
+      # File lib/resque.rb, line 56). Essentially what Resque does is this:
+      # Resque.push(queue, :class => klass.to_s, :args => args)
+      # Translates to: redis.rpush "queue:#{queue}", encode(item).
+      # Basically it is this: redis.rpush queue_name, json_payload
+      # where queue_name is "resque:queue:#{queue_name}" and the json
+      # payload is a job in the form of:
+      # {:class => klass.to_s, :args => args}.to_json
+      #
+      # This job_data method performs the creation of that proper json job
+      # payload. It generates generates a hash that includes the
+      # worker that will be instantiated by the Resque and the id it will
+      # process.
+      def job_notification_data()
+        # "{ \"class\":\"RequestWorker\", \"args\":[\"#{db_id}\"] }"
+        # Here we create a hash of what the Resque system will expect in
+        # the redis queue under resque:queue:prgov_cap.
+        # Note: don't use single quotes for string values on JSON.
+        # Resque expects a JSON so we will create a ruby hash, and safely
+        # turn it to JSON.
+        # There's no need to send the entiret tx object to the worker, we just
+        # send it the id and it'll fetch it and work with it, using the latest
+        # information in the db.
+        # Finally: the information the job_data sends to resque is
+        # message = Config.all["messages"]["initial_confirmation"]
+
+        if language == "english"
+          message = "Thank you for using PR.Gov's online services. You are "+
+                    "receiving this email because you or someone claiming to "+
+                    "be you, has requested a Goodstanding Certificate "+
+                    "from the Puerto Rico Police Department be develiered at "+
+                    "this email address "+
+                    "for #{full_name}.\n\n"+
+                    "The information is being checked against multiple systems"+
+                    "and data sources, including the Puerto Rico Police "+
+                    "Department, the Department of Transportion and Public "+
+                    "Works, and the Criminal Justice Information Division. "+
+                    "Once the check is completed, you will be receiving "+
+                    "additional communications from us regarding this request"+
+                    "\n\n"+
+                    "If you have not requested this "+
+                    "certificate and believe it to be an error, we ask that you"+
+                    "ignore and delete this and any related messages."
+        else
+          #spanish
+          message = "Gracias por utilizar los servicios de PR.Gov. Está "+
+                    "recibiendo este correo por que usted o alguien "+
+                    "haciendose pasar por usted ha solicitado el que un "+
+                    "certificado de Buena Conducta de la Policia de "+
+                    "de Puerto Rico, para #{full_name}, sea enviado a esta "+
+                    "dirección de correo electrónico}.\n\n"+
+                    "La solicitud está siendo revisada con sistemas "+
+                    "del Sistema Integrado de Justicia Criminal del "+
+                    "Departamento de Justicia, la Policia de Puerto Rico, "+
+                    "el Departamento de Obras Públicas entre otros. "+
+                    "Una vez completado la revisión estará "+
+                    "recibiendo otro comunicado de nuestra parte.\n\n"+
+                    "El número de la transacción es: #{id}\n\n"+
+                    "Si entiende que esta solicitud fue en error, por favor "+
+                    "ignore y elimine este, y cualquier correo relacionado al "+
+                    "mismo."
+        end
+
+        html_message = HTMLEntities.new.encode(message, :named)
+
+
+        { "class" => "GMQ::Workers::EmailWorker",
+                     "args" => [{
+                                 "id" => "#{id}",
+                                 "queued_at" => "#{Time.now}",
+				                         "text_message" => message,
+                                 "html_message" => html_message
+                                }]
+        }.to_json
+      end
+
+      def job_rapsheet_validation_data
+        # Here we create a hash of what the Resque system will expect in
+        # the redis queue under resque:queue:prgov_cap.
+        # Note: don't use single quotes for string values on JSON.
+        { "class" => "GMQ::Workers::RapsheetWorker",
+                     "args" => [{
+                                 "id" => "#{id}",
+                                 "queued_at" => "#{Time.now}"
+                                }]
+        }.to_json
+      end
+
+
+      def job_generate_negative_certificate_data
+        # Here we create a hash of what the Resque system will expect in
+        # the redis queue under resque:queue:prgov_cap.
+        # Note: don't use single quotes for string values on JSON.
+        { "class" => "GMQ::Workers::CreateCertificate",
+                     "args" => [{
+                                 "id" => "#{id}",
+                                 "queued_at" => "#{Time.now}"
+                                }]
+        }.to_json
       end
 
       # This method returns the name of the queue we're going to use
       def queue_pending
-        "resque:queue:prgov_request"
+        "resque:queue:prgov_cap"
       end
 
       # a method that creates fake transactions
@@ -479,21 +592,33 @@ module GMQ
       # The public method that allows this instance to be saved to the
       # database.
       def save
+        # Flag that will determine if this is the first time we save.
+        first_save = false
+        # if this is our first time saving this transaction
+        if(@state == :new)
+          @state = :started
+          first_save = true
+        end
+        # Now lets convert the transaction object to a json. Note:
         # We have to retrieve this here, incase we ever need values here
         # from the Store. If we do it inside the multi or pipelined
         # we won't have those values availble when building the json
         # and all we'll have is a Redis::Future object. By doing
         # the following to_json call here, we would've retrieved the data
-        # needed before the save.
+        # needed before the save, properly.
         json = self.to_json
         # do a pipeline command, executing all commands in an atomic fashion.
-        pipelined_save(json)
+        # inform the pipelined save if this is the first time we're saving the
+        # transaction, so that proper jobs may be enqueued.
+        pipelined_save(json, first_save)
         # puts caller
-        debug "#{"Hint".green}: View the transaction data in Redis using: GET #{db_id}\n"+
-              "#{"Hint".green}: View the last #{LAST_TRANSACTIONS_TO_KEEP_IN_CACHE} transactions using: "+
-              "LRANGE #{db_list} 0 -1\n"+
-              "#{"Hint".green}: View the items in pending queue using: LRANGE #{queue_pending} 0 -1\n"+
-              "#{"Hint".green}: View the last item in the pending queue using: LINDEX #{queue_pending} 0"
+        if Config.display_hints
+          debug "#{"Hint".green}: View the transaction data in Redis using: GET #{db_id}\n"+
+                "#{"Hint".green}: View the last #{LAST_TRANSACTIONS_TO_KEEP_IN_CACHE} transactions using: "+
+                "LRANGE #{db_list} 0 -1\n"+
+                "#{"Hint".green}: View the items in pending queue using: LRANGE #{queue_pending} 0 -1\n"+
+                "#{"Hint".green}: View the last item in the pending queue using: LINDEX #{queue_pending} 0"
+        end
         return true
     end
 
@@ -509,10 +634,13 @@ module GMQ
     # that pipeline, or else a new connection from the Connection Pool would
     # be used, which would lead to instability in the system. By recycling the
     # same db connection, we make the system perform with excellent performance.
-    def pipelined_save(json)
-        debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
-        debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
-        debug "Store Pipeline: Attempting to save into \"#{queue_pending}\" queue"
+    #
+    def pipelined_save(json, first_save=false)
+        if Config.display_hints
+          debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
+          debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
+          debug "Store Pipeline: Attempting to save into \"#{queue_pending}\" queue"
+        end
 
         # This is where we do an atomic save on the database. We grab a
         # connection from the pool, and use it. If a connection is unavailable
@@ -521,30 +649,42 @@ module GMQ
         Store.db.pipelined do |db_connection|
           # don't worry about an error here, if the db isn't available
           # it'll raise an exception that will be caught by the system
+
+          # Update the transaction object in the database by storing the JSON
+          # in the key under this ID in the database store.
           db_connection.set(db_id, json)
-          # If TTL is not nil
+
+          # If TTL is not nil, update the Time to Live everytime a transaction
+          # is saved/updated
           if(EXPIRATION > 0)
             db_connection.expire(db_id, EXPIRATION)
           end
 
-          # Add it to a list of the last couple of items items
-          db_connection.lpush(db_list, db_cache_info)
-          # trim the items to the maximum allowed, determined by this constant:
-          db_connection.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
-          # Add it to our GMQ pending queue, to be grabbed by our workers
-          db_connection.rpush(queue_pending, job_data)
+          # if this is the first time this transaction is saved:
+          if first_save
+            # Add it to a list of the last couple of items
+            db_connection.lpush(db_list, db_cache_info)
+            # trim the items to the maximum allowed, determined by this constant:
+            db_connection.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
 
-          # We can't use any method that uses Store.db here
-          # because that would cause us to checkout a db connection from the
-          # pool for each of those commands; the pipelined commands need to
-          # run on the same connection as the commands in the pipeline,
-          # so we will not use the Store.add_pending method. For any
-          # of our own method that requires access to the db, we will
-          # recycle the current db_connection. In this case, the add_pending
-          # LibraryHelper method supports receiving an existing db connection
-          # which makes it safe for the underlying classes to perform
-          # database requests, appending them to this pipeline block.
-          add_pending(db_connection)
+            # Add it to our GMQ pending queue, to be grabbed by our workers
+            # Enqueue a email notification job
+            db_connection.rpush(queue_pending, job_notification_data)
+            # Enqueue a rapsheet validation job
+            db_connection.rpush(queue_pending, job_rapsheet_validation_data)
+
+            # We can't use any method that uses Store.db here
+            # because that would cause us to checkout a db connection from the
+            # pool for each of those commands; the pipelined commands need to
+            # run on the same connection as the commands in the pipeline,
+            # so we will not use the Store.add_pending method. For any
+            # of our own method that requires access to the db, we will
+            # recycle the current db_connection. In this case, the add_pending
+            # LibraryHelper method supports receiving an existing db connection
+            # which makes it safe for the underlying classes to perform
+            # database requests, appending them to this pipeline block.
+            add_pending(db_connection)
+          end # end of first_save for new transactions
         end
         debug "Saved!".bold.green
     end
@@ -555,12 +695,13 @@ module GMQ
       def certificate_ready(params)
           # validate these parameters. If this passes, we can safely import
           params = validate_certificate_ready_parameters(params)
-          # self.certificate_base64          = params["certificate_base64"]
+          self.certificate_base64          = params["certificate_base64"]
           # to reduce memory usage, we no longer store the base64 cert, we
           # merely mark it as received, and look it up in SIJC's RCI when
           # we're ready to send it via email.
-          self.certificate_base64            = true
-          self
+          # self.certificate_base64            = true
+          # Generate the Certificate job:
+          Store.db.rpush(queue_pending, job_generate_negative_certificate_data)
       end
 
 

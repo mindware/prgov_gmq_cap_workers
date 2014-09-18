@@ -1,3 +1,5 @@
+require 'logger'
+require 'app/helpers/errors'
 require 'app/helpers/colorize'
 require 'json'
 
@@ -11,7 +13,9 @@ module GMQ
                           :debug,   # This tells us if we're in debugging mode
                           :downtime,# determines if we're in maintainance
                           :logging, # determines if we're logging
-                          :logger   # returns the logger object. STDOUT if not logging
+                          :logger,   # returns the logger object. STDOUT if not logging
+                          :display_hints # prints out hints to console, such as API
+                                         # resource descriptions & DB commands.
               attr_writer :downtime # This setter lets us go into maintainance mode
           end
 
@@ -35,6 +39,7 @@ module GMQ
           @logging = true
           # variable that determines if we're down for maintenance.
           @downtime = false
+          @display_hints = false
 
           # Gets the current environment (production, development, testing)
           # from the Webserver. At this time, we use Goliath for its awesome
@@ -71,7 +76,7 @@ module GMQ
                                      @all["system"]["logs_max_bytes"])
             else
               # If we're not logging, we default to STDOUT.
-              API.logger
+              Logger
             end
           end
 
@@ -154,6 +159,7 @@ module GMQ
                unless @all["system"]["display_certificates"].nil?
                    @display_certificates = @all["system"]["display_certificates"]
                end
+               @display_hints = @all["system"]["display_hints"] unless @all["system"]["display_hints"].nil?
                # Determines wether we print out to STDOUT what we send to our
                # clients. So, with this, you can see in the console the HTTP
                # result sent to clients.

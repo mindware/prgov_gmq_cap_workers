@@ -11,15 +11,15 @@ class Goliath
     "production"
   end
 end
-# Our hack for the helpers expectation of the API logger.
-class API
-  def self.logger
-    Logger
-  end
-end
+# # Our hack for the helpers expectation of the API logger.
+# class API
+#   def self.logger
+#     Logger
+#   end
+# end
 
-# Hack to define the GMQ::Workers::Grape used by helpers/errors.rb 
-module GMQ 
+# Hack to define the GMQ::Workers::Grape used by helpers/errors.rb
+module GMQ
 	module Workers
 		module Grape
 			module Middleware

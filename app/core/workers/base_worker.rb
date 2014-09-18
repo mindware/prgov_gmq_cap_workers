@@ -1,7 +1,20 @@
+# Base worker class
+# This worker is the one where all other workers will inherit basic
+# capabilities.
+# For: Government Message Queue
+# By: Andres Colón Pérez
+# Updated: September 15 2014
+
+# add the global config helper
 require 'app/helpers/config'
+# add resque-retry modules
 require 'resque-retry'
+# perform any variable rewrite as necessary by using the definitions file
 require 'app/core/definitions/definitions'
+# add the global library of helper functions
 require "app/helpers/library"
+# add the errors definitions
+require 'app/helpers/errors'
 
 # include all files in the helpers library, they're depencies of the transaction
 # model that is used.
@@ -21,6 +34,7 @@ module GMQ
   module Workers
     class BaseWorker
       extend Resque::Plugins::ExponentialBackoff
+      extend LibraryHelper
 
       def self.queue
         # @queue
@@ -56,6 +70,10 @@ module GMQ
       # ErrorException -> amount of seconds to try after given error. IF array
       # try first one, then try x amount later.
       # @retry_exceptions = { NetworkError => 30, SystemCallError => [120, 240] }
+
+      # We can also fail immediately with no retry for these specific exceptions
+      @fatal_exceptions = [ItemNotFound, TransactionNotFound,
+                           MissingTransactionId]
 
       def self.perform(*args)
         # our magic/heavy lifting goes here.

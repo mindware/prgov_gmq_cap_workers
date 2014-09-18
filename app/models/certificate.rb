@@ -25,7 +25,7 @@ module GMQ
 				# if cert isn't ready, simply return false and deny this.
 				false if !ready?
 				begin
-					puts "Saving decoded certifiate in #{file}"
+					puts "Saving decoded certificate in #{file}"
 					File.open(file, 'w') { |file| file.write(@data) }
 					if validate_pdf(file)
 						puts "Done."
@@ -37,13 +37,14 @@ module GMQ
 					end
 				rescue Exception => e
 					puts "Error: #{e}"
-					return false
+					# Raise the error
+					raise e
 				end
 			end
 
 
-			def initialize(base64_file)
-				load(base64_file)
+			def initialize()
+				# load(base64_file)
 			end
 
 			def validate_pdf(file)
@@ -54,11 +55,18 @@ module GMQ
 				}
 				return true if output.to_s.downcase.include? "pdf"
 			  rescue Exception => e
-				puts "Error checking file type: #{e.backtrace.join("\n")}"
+					Config.logger.error "Error checking file type: #{e.backtrace.join("\n")}"
+					return false
 			  end
 			end
 
-			def load(file64)
+			# set base64 data directly to memory
+			def load_data(base64_data)
+				@data = Base64.decode64(base64_data)
+			end
+
+			# load base64 files to memory.
+			def load_file(file64)
 				@file    = file64
 				@decoded = false
 				@data	 = nil

@@ -2,11 +2,16 @@ require '../lib/rest'
 
 # PR.Gov transaction id:
 tx_id = '0338ca35444694f18a'
-user = "prgov"
-pass = "***REMOVED***"
-ip = '***REMOVED***'
-http = 'https'
-url = "#{http}://${ip}:#{pass}/#{url}"
+user = ENV['SIJC_RCI_USER']
+pass = ENV['SIJC_RCI_PASSWORD']
+#ip = '***REMOVED***'
+ip = 'localhost'
+#port = ''
+port = ':9000'
+#http = 'https'
+http = 'http'
+#url = "#{http}://#{user}:#{pass}@#{ip}"
+url = "#{http}://#{ip}#{port}"
 
 # Grab the id from the params, otherwise us an id that may or may not exist.
 if ARGV[0].to_s != ""
@@ -31,6 +36,9 @@ payload = {
            }
 method = "put"
 type = "json"
+
+
+method = 'get'
 
 a = Rest.new(url, user, pass, type, payload, method)
 a.request

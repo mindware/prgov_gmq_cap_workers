@@ -1,4 +1,5 @@
 # Andrés Colón Pérez - office of the CIO 2014
+require 'app/helpers/config'
 module GMQ
 	module Workers
 		module LibraryHelper
