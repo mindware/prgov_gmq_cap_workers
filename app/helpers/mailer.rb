@@ -6,7 +6,6 @@ module GMQ
 	module Workers
 		class Mailer
 			extend LibraryHelper
-
 			# This method setups the mailer. At this time it simply
 			# sets it up and returns true.
 			# TODO IDEA: Ideally it should check if the mailer is available, and

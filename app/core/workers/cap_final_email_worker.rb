@@ -32,7 +32,7 @@ module GMQ
           # IMPORTANT THINGS TODO HERE!
           # TODO We should check here how the transaction ended in this final
           # email. Did things go ok? Did things go astray? Note it down update
-          # the status, state and stats.
+          # the status, state and stats. 
           #
           # if (something bad happened)
           #  <do something / update>

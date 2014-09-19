@@ -26,8 +26,10 @@ module GMQ
         user = ENV["SIJC_RCI_USER"]
         pass = ENV["SIJC_RCI_PASSWORD"]
         # generate url & query
-        url = "https://66.50.173.6/v1/api/rap/request"
+        # url = "https://66.50.173.6/v1/api/rap/request"
         # url = "http://localhost:9000/v1/cap/"
+        url = "#{ENV["SIJC_PROTOCOL"]}://#{ENV["SIJC_IP"]}#{ENV["SIJC_PORT"]}/v1/api/rap/request"
+
         query = ""
         query << "?tx_id=#{transaction.id}"
         query << "&first_name=#{transaction.first_name}"
@@ -55,7 +57,9 @@ module GMQ
         url << query
 
         # callback_url = 'http://servicios.pr.gov/v1/cap/missing'
-        callback_url = 'http://thoughtware.tv/api/missing_test'
+        # callback_url = 'http://thoughtware.tv/api/missing_test'
+        callback_url = "#{ENV["CAP_API_PUBLIC_PROTOCOL"]}://#{ENV["CAP_API_PUBLIC_IP"]}#{ENV["CAP_API_PUBLIC_PORT"]}/v1/cap/transaction/certificate_ready"
+        url << "&callback_url=#{callback_url}"
 
         # https://***REMOVED***/v1/api/rap/request?tx_id=0123456789123456&
         # first_name=Andres&last_name=Colon&ssn=***REMOVED***&license=***REMOVED***&
