@@ -48,15 +48,32 @@ module GMQ
             #                                   :accept => :json
 
             case method
+              # For HTTP GETs:
               when "get"
                 # response = RestClient.get site, :content_type => type
-                response = RestClient.send method, @site
+                # response = RestClient.send method, @site
+                # Manage a specific error code
+                response = RestClient.get(@site){ |response, request, result, &block|
+                  case response.code
+                    when 200
+                      response
+                    when 400
+                      response
+                    when 500
+                      response.return!(request, result, &block)
+                    else
+                      response.return!(request, result, &block)
+                  end
+                }
+              # For HTTP Posts:
               # when "post"
                 # response = RestClient.post site, payload, :content_type => type,
                 #                            :accept => :json
+              # For HTTP Puts:
               # when "put"
                 # response = RestClient.put site, payload, :content_type => type,
                 #                            :accept => :json
+              # For HTTP Deletes:
               # when "delete"
                 # response = RestClient.delete site, payload,
                 #                            :content_type => type

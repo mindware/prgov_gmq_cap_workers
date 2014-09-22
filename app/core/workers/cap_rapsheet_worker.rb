@@ -89,9 +89,31 @@ module GMQ
           logger.info "HTTP Code:\n#{response.code}\n\n"
           logger.info "Headers:\n#{response.headers}\n\n"
           logger.info "Result:\n#{response.gsub(",", ",\n").to_str}\n"
-          #  if response.code.to_s == 400
+          case response.code
+            when 200
+              response
+            when 400
+              json = JSON.parse(response)
+              logger.error "RCI ERROR PAYLOAD: #{json["status"]} - "+
+                                              "#{json["code"]} - "+
+                                              "#{json["message"]}"
+
+            # 500 errors are internal server errors. They will be
+            # retried. Here we allow RestClient to raise an Exception
+            # which will be caught by the system and retried.
+            when 500
+              response.return!(request, result, &block)
+            # Any other http error codes are processed. Such as 301, 302
+            # redirections, etc are properly processed and we allow Restclient
+            # to decide what to do in those cases, such as follow, or throw
+            # Exceptions
+            else
+              response.return!(request, result, &block)
+          end
         rescue RestClient::Exception => e
-          logger.error "Error #{e} while processing #{transaction.id}: #{e.inspect.to_s}"
+          logger.error "Error #{e} while processing #{transaction.id}: #{e.inspect.to_s}"+
+          " MESSAGE: #{e.message}"
+
           raise GMQ::RCI::ApiError, "#{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
         end

@@ -47,9 +47,11 @@ module GMQ
 					  # attempt to read the file from disk and add it to the payload
 						payload["file_content"] = File.read(payload["file_path"])
 				end
+				Config.logger.info "Mailing."
 				result = self.send_mail(payload)
 				raise StandardError, "Could not send email payload" if !result
-
+				Config.logger.info "Mailing done!"
+				return true
 			end
 
 			def self.mail(to, from, subject, text, html, file_rename=nil, file_path=nil)
@@ -83,7 +85,6 @@ module GMQ
 
 		  def self.send_mail(data)
 					false if(!data.nil?)
-					logger.info "Mailing #{data}"
 					# Send the email
 				  mail = Mail.deliver do
 				    to "#{data["to"]}"
