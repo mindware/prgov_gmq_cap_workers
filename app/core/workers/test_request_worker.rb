@@ -1,8 +1,9 @@
 # require 'app/core/workers/base_worker'
-# 
+#
 # class RequestWorker < BaseWorker
 #   # @queue = :prgov_cap
 #   def self.perform(*args)
+#      super # call base worker perform
 #      a = rand(10)
 #     #  begin
 #         raise Exception if (a >= 7)
