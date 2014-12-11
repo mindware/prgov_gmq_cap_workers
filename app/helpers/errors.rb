@@ -495,6 +495,30 @@ module GMQ
       end
     end
 
+
+    class InvalidParameters < GMQ::Workers::AppError
+      def self.data
+        { "error" => { "http_error" => "400 Bad Request",
+                       "http_code" => 400,
+                       "app_error" => "Invalid Parameters",
+                       "app_code" => 2999
+                    }
+        }
+      end
+    end
+
+    class IncorrectEmailParameters < GMQ::Workers::AppError
+            def self.data
+              { "error" => { "http_error" => "400 Bad Request",
+                             "http_code" => 400,
+                             "app_error" => "Invalid or missing arguments for email worker.",
+                             "app_code" => 2020
+                          }
+              }
+            end
+    end
+
+
     ################################################################
     ########          Additional Validation Errors          ########
     ################################################################
@@ -519,17 +543,6 @@ module GMQ
                         "app_error" => "Forbidden: Your credentials do"+
                         " not allow you access to that resource.",
                         "app_code" => 4500
-                    }
-        }
-      end
-    end
-
-    class InvalidParameters < GMQ::Workers::AppError
-      def self.data
-        { "error" => { "http_error" => "400 Bad Request",
-                       "http_code" => 400,
-                       "app_error" => "Invalid Parameters",
-                       "app_code" => 2999
                     }
         }
       end
@@ -674,7 +687,6 @@ module GMQ
         }
       end
     end
-
 
     ################################################################
     ########          External Systems  Unavailable         ########
