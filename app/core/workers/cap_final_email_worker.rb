@@ -9,6 +9,7 @@ module GMQ
     class FinalEmailWorker < GMQ::Workers::BaseWorker
 
       def self.perform(*args)
+        super # call base worker perform
         payload = args[0]
         if payload.has_key? "text" or payload.has_key? "html"
           logger.info "#{self.class} requested for #{payload["id"]}"
@@ -32,14 +33,15 @@ module GMQ
           # IMPORTANT THINGS TODO HERE!
           # TODO We should check here how the transaction ended in this final
           # email. Did things go ok? Did things go astray? Note it down update
-          # the status, state and stats. 
+          # the status, state and stats.
           #
           # if (something bad happened)
           #  <do something / update>
           # else
             # Everything went fine:
             # Close the transaction
-            logger.info "Mail sent. Updating transaction state and statistics."
+            logger.info "Mail sent. Here we would update transaction state and statistics."
+            # logger.info "Mail sent. Updating transaction state and statistics."
             # transaction.status = "completed"
             # transaction.state = "finished"
             # transaction.save
@@ -51,7 +53,9 @@ module GMQ
 
         else
           puts "\n\nNO PAYLOAD #{payload}\n\n"
-          raise StandardError, "No text_message or html_message in email"
+          raise IncorrectEmailParameters, "Invalid arguments. Text and html "+
+                                          "parameters are required for email "+
+                                          "worker."
         end
         # data hash:
         # to
