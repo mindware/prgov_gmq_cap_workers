@@ -9,9 +9,18 @@ module GMQ
     class EmailWorker < GMQ::Workers::BaseWorker
 
       def self.perform(*args)
-
+        super # call base worker perform checks
         payload = args[0]
-        if payload.has_key? "text_message" or payload.has_key["html_message"]
+
+        if (payload.nil? or !(payload.has_key? "text" or payload.has_key? "html"))
+            raise IncorrectEmailParameters, "Invalid arguments. Text and html "+
+                                            "parameters are required for email "+
+                                            "worker."
+        end
+
+        # If a transaction id has been provided, get the
+        # data from the db.
+        if payload.has_key? "id"
 
           # Let's fetch the transaction from the Data Store.
           # The following line returns GMQ::Workers::TransactionNotFound
@@ -27,10 +36,14 @@ module GMQ
           payload["subject"] = "PR.Gov Certificado de Buena Conducta / Goodstanding Certificate"
 
           # Use our GMQ Mailer class to mail the payload.
-          Mailer.mail_payload(payload)
+          if(!Mailer.mail_payload(payload))
+            raise
+          end
+        # Else if no id provided, we allow the custom email through
+        # which has already been properly validated by GMQ API.
+        elsif Mailer.mail_payload(payload)
         else
-          puts "\n\nNO PAYLOAD #{payload}\n\n"
-          raise StandardError, "No text_message or html_message in email"
+          raise PRGov::IncorrectEmailParameters, "Invalid or missing arguments for email worker."
         end
         # data hash:
         # to
