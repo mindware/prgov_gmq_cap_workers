@@ -73,12 +73,24 @@ module GMQ
 
       # We can also fail immediately with no retry for these specific exceptions
       @fatal_exceptions = [ItemNotFound, TransactionNotFound,
-                           MissingTransactionId]
+                           MissingTransactionId, IncorrectEmailParameters]
 
       def self.perform(*args)
+        # fail all jobs if we're in maintenance mode
+        if maintenance?
+          raise ServiceUnavailable, "Service in maintenance mode. Job will retry."
+        end
         # our magic/heavy lifting goes here.
-        # redefine this for each worker
+        # redefine this for each worker, but call super as the
+        # first line, in order to perform base checks such as maintenance
+        # defined in this worker.
       end
+
+      # TODO: this method would help workers know if they're in maintenance
+      def self.maintenance?
+        false
+      end
+
     end # end of class
   end # end of worker
 end # end of gmq module
