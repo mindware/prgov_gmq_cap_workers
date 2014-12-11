@@ -10,6 +10,7 @@ module GMQ
     class RapsheetWorker < GMQ::Workers::BaseWorker
 
       def self.perform(*args)
+        super # call base worker perform
         payload = args[0]
 
         # get the ID from the params. If it is missing, we error out.

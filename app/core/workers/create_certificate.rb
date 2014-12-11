@@ -10,6 +10,7 @@ module GMQ
     class CreateCertificate < BaseWorker
 
       def self.perform(*args)
+        super # call base worker perform
         payload = args[0]
         # Get the ID from the job parameters. If it is missing, we error out.
         # TODO This error should not be a candidate for a retry

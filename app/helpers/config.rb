@@ -258,6 +258,37 @@ module GMQ
                  :synchrony
               end
           end
+
+          # Returns the database we're going to be connecting to.
+          # The redis database number we're connecting to. Redis uses
+          # numbered database (instead of database names) to distinguish
+          # on which database you're working on. This can be specified in
+          # the projects root's config folder, in tehe file db.json, by
+          # adding a key and value to each database server config, such as:
+          # "db_id"    : 0
+          def self.db_id
+              if(@all["db"].has_key? "db_id")
+                 @all["db"]["db_id"]
+              else
+                 # by default, use database number 0 for redis unless
+                 # specified.
+                 0
+              end
+          end
+
+          # Returns the password we're going to use to connect to redis
+          def self.db_password
+              # later change this so that we use the port
+              # of the current db_host, when we add iteration
+              # in case of failure
+              index = @all["db"]["servers"].keys[0]
+              if(@all["db"]["servers"][index].has_key? "password")
+                 @all["db"]["servers"][index]["password"]
+              else
+                 # by default, send an empty password.
+                 ""
+              end
+          end
       end
   end
 end

@@ -6,40 +6,34 @@ module GMQ
 	module Workers
 		class Mailer
 			extend LibraryHelper
-			# This method setups the mailer. At this time it simply
-			# sets it up and returns true.
-			# TODO IDEA: Ideally it should check if the mailer is available, and
-			# return false if it isn't. We could do this by having a scheduled worker
-			# that simply assesses the availability of the STMP server. The setup method
-			# would check that, and if it fails, we don't send email.
-			#      IDEA: We should also check if we're in downtime mode. At that time
-			#            we shouldn't be sending emails and jobs should simply retry later
+			# This method setups the mailer configuration.
 			def self.setup
-						# Setup the Mailer
-						Mail.defaults do
-							delivery_method :smtp, {
-															:address   	 => Config.all["system"]["smtp"]["host"],
-															:port     	 => Config.all["system"]["smtp"]["port"],
-															:user_name	 => Config.all["system"]["smtp"]["user"],
-															:password 	 => Config.all["system"]["smtp"]["password"],
-															:authentication       => 'plain',
-															:enable_starttls_auto => true
-							}
-							Config.logger.info "Using #{Config.all["system"]["smtp"]["host"]} as relay."
-						end # end of mail.defaults
-				return true
+					# Setup the Mailer
+					Mail.defaults do
+						delivery_method :smtp, {
+														:address   	 => Config.all["system"]["smtp"]["host"],
+														:port     	 => Config.all["system"]["smtp"]["port"],
+														:user_name	 => Config.all["system"]["smtp"]["user"],
+														:password 	 => Config.all["system"]["smtp"]["password"],
+														:authentication       => 'plain',
+														:enable_starttls_auto => true
+						}
+						Config.logger.info "Using #{Config.all["system"]["smtp"]["host"]} as relay."
+					end # end of mail.defaults
 			end
 
 		  # The new way to mail
 			def self.mail_payload(payload)
-				# if setup fails, return false
-				return false if !self.setup
+				self.setup
+
 				# if any required parameter is missing, return false
-				return false if !payload.has_key?("to") or
-												!payload.has_key?("from") or
-												!payload.has_key?("subject") or
-												!payload.has_key?("text") or
-												!payload.has_key?("html")
+				if !payload.has_key?("to") or
+					 !payload.has_key?("from") or
+					 !payload.has_key?("subject") or
+					 !payload.has_key?("text") or
+					 !payload.has_key?("html")
+							raise PRGov::IncorrectEmailParameters, "Invalid or missing arguments for mailer."
+				end
 
 				# if file_rename (custom name for attachment) and file_path (the path to
 				# file) arent nil, read file and append the file data to the email:
@@ -54,8 +48,9 @@ module GMQ
 				return true
 			end
 
+			# old method, do not use.
 			def self.mail(to, from, subject, text, html, file_rename=nil, file_path=nil)
-				# puts "SENDING!!!!!\n\n"
+				puts "SENDING!!!!!\n\n"
 				# if setup fails, return false
 				return false if !self.setup
 				# if any parameter is missing, return false

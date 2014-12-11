@@ -3,7 +3,9 @@ scheduler:  bundle exec rake resque:scheduler
 
 # Resque-Retry and workers:
 # Development: verbose:
-gmq-workers: bundle exec rake resque:work QUEUE=prgov_cap COUNT=3 TERM_CHILD=1 VVERBOSE=1 --trace
+# 1 child in development:
+gmq-workers: bundle exec rake resque:work QUEUE=prgov_cap COUNT=1 TERM_CHILD=1 VVERBOSE=1 --trace
+#gmq-workers: bundle exec rake resque:work QUEUE=prgov_cap COUNT=3 TERM_CHILD=1 VVERBOSE=1 --trace
 # Development: non-verbose:
 #worker-dev: bundle exec rake resque:work QUEUE=prgov_cap COUNT=1 TERM_CHILD=1 --trace
 # Only In Production uncomment this:

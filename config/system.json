@@ -7,12 +7,12 @@
   "backtrace_errors"      : false,
   "display_results"       : true,
   "downtime"              : false,
-  "temp_dir"              : "/tmp/gmq/",
+  "temp_dir"              : "./",
   "smtp" : {
                "host"     : "smtp.mandrillapp.com",
                "port"	    : 587,
                "user"     : "acolon@ogp.pr.gov",
-               "password" : "bP4RafiGZN_IJcBJJtPH0w",
+               "password" : "pDMXHTGDBKFJMOBHAUbDoA",
                "from"     : "noreply@servicios.pr.gov"
   }
 }
