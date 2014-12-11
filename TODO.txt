@@ -22,6 +22,9 @@ Pending:
 15. Checksum all files that we put in OGP
 16. worker actions against DB should be against API - stats - transaction updates - library helpers
 17. figure out why finalemailworker is showing the full payload on the verbose mode in resque
+18. Consider adding binary payloads in the mailers mail method so we dont need to write the file to disk
+19. Add real code to the mainteance mode in the base worker
+20. config logger with loggin strategy smiliar to GMQ for space utilization
 Done:
 1. rapsheetworker: do not retry if LocalTransactionNotFound
 2. Dont retry RapsheetWorker or any worker if tx ID is not found. If it is invalid.
