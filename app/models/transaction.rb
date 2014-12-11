@@ -497,13 +497,12 @@ module GMQ
 
         html_message = HTMLEntities.new.encode(message, :named)
 
-
         { "class" => "GMQ::Workers::EmailWorker",
                      "args" => [{
                                  "id" => "#{id}",
                                  "queued_at" => "#{Time.now}",
-				                         "text_message" => message,
-                                 "html_message" => html_message
+				                         "text" => message,
+                                 "html" => html_message
                                 }]
         }.to_json
       end
