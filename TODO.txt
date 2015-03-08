@@ -25,6 +25,7 @@ Pending:
 18. Consider adding binary payloads in the mailers mail method so we dont need to write the file to disk
 19. Add real code to the mainteance mode in the base worker
 20. config logger with loggin strategy smiliar to GMQ for space utilization
+21. Either fully adopt config user.json and authentication.rb module or remove it and continue with .env not both
 Done:
 1. rapsheetworker: do not retry if LocalTransactionNotFound
 2. Dont retry RapsheetWorker or any worker if tx ID is not found. If it is invalid.
