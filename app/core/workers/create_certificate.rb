@@ -38,8 +38,8 @@ module GMQ
                   "id"   => transaction.id,
                   "file_path" => file,
                   "file_rename" => "certificado_prgov.pdf",
-                  "text" => "This is a great message. Your cert is ready",
-                  "html" => "This is a great message.<b>Your certificate is ready</b>"
+                  "text" => "Your certificate is ready.",
+                  "html" => "<b>Your certificate is ready</b>"
               })
            else
               puts "Could not create a valid PDF file in #{file}"
