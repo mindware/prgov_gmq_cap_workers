@@ -90,7 +90,7 @@ module GMQ
             #  puts e.inspect.to_s
       end
 
-      def initialize(url, user, pass, type, payload, method)
+      def initialize(url, user, pass, type, payload, method, query="")
          @user = user
          @pass = pass
          # If a user or password has been supplied, we
@@ -112,6 +112,12 @@ module GMQ
          else
            @site = url
          end
+
+         # append the query. We add the query seperately as the url
+         # and query may both contain URI content and we only want the
+         # url to contain the credentials. So appending query after
+         # credentails have been added is the right way to go.
+         @site = "#{@site}#{query}"
 
          # This URL may contain special characters, such as accents,
          # which Ruby's URI can’t handle, so let's encode it.

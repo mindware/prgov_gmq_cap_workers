@@ -52,28 +52,12 @@ module GMQ
         # before. Thus, writing this next line was as 'fun' as it sounds.
         epoch_time = DateTime.strptime("#{transaction.birth_date} 4",
                                        "%d/%m/%Y %H").strftime("%Q")
+        logger.info "Transforming birthdate: #{transaction.birth_date} to epoch time #{epoch_time}."
         query << "&birth_date=#{epoch_time}"
 
-        # Finally generate the url, by appending the query:
-        url << query
-
-        # callback_url = 'http://servicios.pr.gov/v1/cap/missing'
-        # callback_url = 'http://thoughtware.tv/api/missing_test'
         callback_url = "#{ENV["CAP_API_PUBLIC_PROTOCOL"]}://#{ENV["CAP_API_PUBLIC_IP"]}#{ENV["CAP_API_PUBLIC_PORT"]}/v1/cap/transaction/certificate_ready"
-        url << "&callback_url=#{callback_url}"
+        query << "&callback_url=#{callback_url}"
 
-        # https://***REMOVED***/v1/api/rap/request?tx_id=0123456789123456&
-        # first_name=Andres&last_name=Colon&ssn=***REMOVED***&license=***REMOVED***&
-        # birth_date=***REMOVED***
-        # payload = {
-        #       "tx_id" => transaction.id,
-        #       "first_name" => transaction.first_name,
-        #       "last_name" => transaction.last_name,
-        #       "ssn"	=> transaction.ssn,
-        #       "license"	=> transaction.license_number,
-        #       "birth_date" => transaction.birth_date,
-        #       "callback_url" => callback_url
-        # }
         payload = ""
         # method = "put"
         # type = "json"
@@ -82,7 +66,7 @@ module GMQ
 
         begin
         # raise AppError, "#{url}, #{user}, #{pass}, #{type}, #{payload}, #{method}"
-          a = Rest.new(url, user, pass, type, payload, method)
+          a = Rest.new(url, user, pass, type, payload, method, query)
           logger.info "#{self} is processing #{transaction.id}, "+
                       "requesting: URL: #{a.site}, METHOD: #{a.method}, "+
                       "TYPE: #{a.type}"
@@ -98,6 +82,95 @@ module GMQ
               logger.error "RCI ERROR PAYLOAD: #{json["status"]} - "+
                                               "#{json["code"]} - "+
                                               "#{json["message"]}"
+
+              # ENQUE WORKER to notify USER of faliled communication
+              # with SIJC's RCI.
+
+              # Here we should go error by error to identify exactly
+              # what SIJC mentioned and deal with it accordingly
+              # and notify the user. We need to catch each error.
+
+              # Eror Responses
+              # Description
+              # Http Status Code
+              # Application Code
+              # Message
+              # The social security number is a required parameter for the request.
+              # 400
+              # 1001
+              # Parameter: ssn is required.
+              #
+              # The license number is a required parameter for the request.
+              # 400
+              # 1002
+              #
+              # Parameter: license_number is required.
+              # The first name is a required parameter for the request.
+              # 400
+              # 1003
+              #
+              # Parameter: first_name is required.
+              # The last name is a required parameter for the request.
+              # 400
+              # 1004
+              #
+              # Parameter: last_name is required.
+              # The birth date is a required parameter for the request.
+              # 400
+              # 1005
+              #
+              # Parameter: birth_date is required.
+              # The value provided on the birth date does not correspond to a valid date.
+              # 400
+              # 1006
+              #
+              # The birth date provided does not represent a valid birth date.
+              # The social security number provided does not match with the social security number on the record identified on the external service.
+              # 400
+              # 2001
+              #
+              # Invalid ssn provided.
+              # The license number provided does not match name on the record identified on the external service.
+              # 400
+              # 2002
+              #
+              # Invalid license number provided.
+              # The name provided does not match name on the record identified on the external service.
+              # 400
+              # 2003
+              #
+              # Invalid name provided.
+              # The birth date provided does not match birth date on the record identified on the external service.
+              # 400
+              # 2004
+              #
+              # Invalid birth date provided.
+              # The external service did not return any results matching the search criteria.
+              # 400
+              # 3001
+              #
+              # Could not identify individual on external service.
+              # The external service returned multiple results matching the search criteria.
+              # 400
+              # 3002
+              #
+              # Multiple results found on external service. DTOP.
+              # The service couldn’t identify precisely the information submitted. This is what we call a fuzzy search.
+              # 400
+              # 3003
+              #
+              #
+              # Fuzzy Search. Couldn't identify properly the profile on the criminal record registry.
+              # The document store is having problems persisting requests or it’s simply down.
+              # 500
+              # 8000
+              #
+              # The service is having trouble communicating with MongoDB or something was wrong saving the
+              # An unexpected error ocurred while processing the request.
+              # 500
+              # 9999
+              # Unexpected Error.
+
 
             # 500 errors are internal server errors. They will be
             # retried. Here we allow RestClient to raise an Exception
