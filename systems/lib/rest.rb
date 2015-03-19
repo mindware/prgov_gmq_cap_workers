@@ -2,10 +2,20 @@
 # is in the ruby path. This way we don't have to include relative filepaths
 $: << File.expand_path(File.dirname(__FILE__) +"/../../")
 
+Dir.chdir "../../"
+
+# Require bundler
+require 'bundler/setup'
+Bundler.require
+
 require 'json'
 require 'rest_client'
 require 'dotenv'
 Dotenv.load
+puts "PWD: #{Dir.pwd}" 
+puts "PWD: #{File.dirname(__FILE__)}" 
+puts "RCI: #{ENV['SIJC_RCI_USER']}" 
+puts "IP: #{ENV['SIJC_IP']}" 
 # include all helpers - since the scripts are ran under us, we take their path
 # into consideration, and so an additiona ../
 require "app/helpers/library" 
