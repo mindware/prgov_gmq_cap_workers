@@ -27,8 +27,6 @@ module GMQ
         user = ENV["SIJC_RCI_USER"]
         pass = ENV["SIJC_RCI_PASSWORD"]
         # generate url & query
-        # url = "https://66.50.173.6/v1/api/rap/request"
-        # url = "http://localhost:9000/v1/cap/"
         url = "#{ENV["SIJC_PROTOCOL"]}://#{ENV["SIJC_IP"]}#{ENV["SIJC_PORT"]}/v1/api/rap/request"
 
         query = ""
@@ -76,12 +74,38 @@ module GMQ
           logger.info "Result:\n#{response.gsub(",", ",\n").to_str}\n"
           case response.code
             when 200
+              # response
+              # puts "We got the following response: #{response}"
+              logger.info "#{response}"
               response
             when 400
               json = JSON.parse(response)
               logger.error "RCI ERROR PAYLOAD: #{json["status"]} - "+
                                               "#{json["code"]} - "+
                                               "#{json["message"]}"
+
+              Resque.enqueue(GMQ::Workers::EmailWorker, {
+                  "id"   => transaction.id,
+                  "subject" => "Error en la validación de su solicitud",
+                  "text" => "Le informamos que la información "+
+                            "tal como nos fue suministrada no pudo ser "+
+                            "corroborada en los sistemas gubernamentales.\n\n"+
+                            "Al solicitar el Certificado de Antecedentes "+
+                            "Penales debe asegurarse solicitar con la "+
+                            "informacióntal tal cual "+
+                            "aparece en la identificación del metodo de "+
+                            "identificación seleccionado.\n\n"+
+                            "Error: #{json["message"]}",
+                  "html" => "Le informamos que la información "+
+                            "tal como nos fue suministrada no pudo ser "+
+                            "corroborada en los sistemas gubernamentales.\n\n"+
+                            "Al solicitar el Certificado de Antecedentes "+
+                            "Penales debe asegurarse solicitar con la "+
+                            "informacióntal tal cual "+
+                            "aparece en la identificación del metodo de "+
+                            "identificación seleccionado.\n\n"+
+                            "<i>Error: #{json["message"]}</i>".gsub("\n", "<br/>"),
+              })
 
               # ENQUE WORKER to notify USER of faliled communication
               # with SIJC's RCI.
