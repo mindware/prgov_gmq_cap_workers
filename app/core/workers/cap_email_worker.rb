@@ -33,7 +33,7 @@ module GMQ
           # Append the email
           payload["to"] = transaction.email
           payload["from"]  = Config.all["system"]["smtp"]["from"]
-          payload["subject"] = "PR.Gov Certificado de Buena Conducta / Goodstanding Certificate"
+          payload["subject"] = "PR.Gov Certificado de Buena Conducta / Goodstanding Certificate" if !payload.has_key? "subject"
 
           # Use our GMQ Mailer class to mail the payload.
           if(!Mailer.mail_payload(payload))
