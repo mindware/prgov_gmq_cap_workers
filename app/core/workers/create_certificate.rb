@@ -28,7 +28,7 @@ module GMQ
         if(transaction.certificate_base64)
            cert = Certificate.new
            cert.load_data(transaction.certificate_base64)
-           file = "#{Config.all["system"]["temp_dir"]}files/pdf/#{transaction.id}.pdf"
+           file = "#{Config.all["system"]["temp_dir"]}#{transaction.id}.pdf"
            # try to save the pdf file. This either returns true or exception
            if(cert.dump(file))
               puts "Created a valid PDF file in #{file}."
