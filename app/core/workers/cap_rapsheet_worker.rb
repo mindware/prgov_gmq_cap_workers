@@ -14,14 +14,41 @@ module GMQ
         payload = args[0]
 
         # get the ID from the params. If it is missing, we error out.
-        # TODO This error should not be a candidate for a retry
-        raise MissingTransactionId if !payload.has_key? "id"
+        # This error is not be a candidate for a retry thanks to BaseWorker.
+        if !payload.has_key? "id"
+          logger.error "#{self} is missing a transaction id, and cannot continue. "+
+               "This should never happen. Check the GMQ API, responsible for "+
+               "providing a proper id for this job."
+          puts "#{self} is missing a transaction id, and cannot continue. "+
+               "This should never happen. Check the GMQ API, responsible for "+
+               "providing a proper id for this job. This job will not retry."
+          raise MissingTransactionId
+        end
 
         # Let's fetch the transaction from the Data Store.
         # The following line returns GMQ::Workers::TransactionNotFound
         # if the given Transaction id is not found in the system.
         # BaseWorker will not retry a job for a transaction that is not found.
-        transaction = Transaction.find(payload["id"])
+        begin
+          transaction = Transaction.find(payload["id"])
+        # Detect any Transaction not found errors and log them properly
+        rescue GMQ::Workers::TransactionNotFound => e
+          logger.error "#{self} could not find transaction id "+
+                       "#{payload["id"]}. This job will not be retried."
+          puts "#{self} could not find transaction id #{payload["id"]}. This "+
+               " job will not be retried."
+          # re-raise so that it's caught by resque and the job isn't retried.
+          raise e
+        # log any other exceptions, but let resque retry according to our
+        # BaseWorker specifications.
+        rescue Exception => e
+          logger.error "#{self} encountered a #{e.class.to_s} error while "+
+               "fetching transaction #{payload["id"]}."
+          puts "#{self} encountered a #{e.class.to_s} error while "+
+               "fetching transaction #{payload["id"]}."
+          # re-raise so that it's caught by resque
+          raise e
+        end
 
         # Grab the environment credentials for RCI
         user = ENV["SIJC_RCI_USER"]
@@ -50,7 +77,7 @@ module GMQ
         # before. Thus, writing this next line was as 'fun' as it sounds.
         epoch_time = DateTime.strptime("#{transaction.birth_date} 4",
                                        "%d/%m/%Y %H").strftime("%Q")
-        logger.info "Transforming birthdate: #{transaction.birth_date} to epoch time #{epoch_time}."
+        logger.info "#{self} is transforming birthdate: #{transaction.birth_date} to epoch time #{epoch_time}."
         query << "&birth_date=#{epoch_time}"
 
         callback_url = "#{ENV["CAP_API_PUBLIC_PROTOCOL"]}://#{ENV["CAP_API_PUBLIC_IP"]}#{ENV["CAP_API_PUBLIC_PORT"]}/v1/cap/transaction/certificate_ready"
@@ -63,20 +90,16 @@ module GMQ
         type   = "text/html; charset=utf-8"
 
         begin
-        # raise AppError, "#{url}, #{user}, #{pass}, #{type}, #{payload}, #{method}"
           a = Rest.new(url, user, pass, type, payload, method, query)
           logger.info "#{self} is processing #{transaction.id}, "+
                       "requesting: URL: #{a.site}, METHOD: #{a.method}, "+
                       "TYPE: #{a.type}"
           response = a.request
-          logger.info "HTTP Code:\n#{response.code}\n\n"
-          logger.info "Headers:\n#{response.headers}\n\n"
-          logger.info "Result:\n#{response.gsub(",", ",\n").to_str}\n"
+          logger.info "HTTP Code: #{response.code}\n"+
+                      "Headers: #{response.headers}\n"+
+                      "Result: #{response.to_str}\n"
           case response.code
             when 200
-              # response
-              # puts "We got the following response: #{response}"
-              logger.info "#{response}"
               response
             when 400
               json = JSON.parse(response)
@@ -95,7 +118,7 @@ module GMQ
                             "informacióntal tal cual "+
                             "aparece en la identificación del metodo de "+
                             "identificación seleccionado.\n\n"+
-                            "Error: #{json["message"]}",
+                            "RCI Error: #{json["message"]}",
                   "html" => "Le informamos que la información "+
                             "tal como nos fue suministrada no pudo ser "+
                             "corroborada en los sistemas gubernamentales.\n\n"+
@@ -104,7 +127,7 @@ module GMQ
                             "informacióntal tal cual "+
                             "aparece en la identificación del metodo de "+
                             "identificación seleccionado.\n\n"+
-                            "<i>Error: #{json["message"]}</i>".gsub("\n", "<br/>"),
+                            "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>"),
               })
 
               # ENQUE WORKER to notify USER of faliled communication
@@ -209,12 +232,37 @@ module GMQ
               response.return!(request, result, &block)
           end
         rescue RestClient::Exception => e
-          logger.error "Error #{e} while processing #{transaction.id}: #{e.inspect.to_s}"+
-          " MESSAGE: #{e.message}"
-
+          logger.error "Error #{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: MESSAGE: #{e.message} - DETAIL: #{e.inspect.to_s}."
+          puts "Error #{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: #{e.inspect.to_s} MESSAGE: #{e.message}."
           raise GMQ::RCI::ApiError, "#{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
-        end
+
+        # Timed out - Happens when a network error doesn't permit
+        # us to communicate with the remote API.
+        rescue Errno::ETIMEDOUT => e
+          logger.error "Could Not Connect - #{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: MESSAGE: #{e.message} - DETAIL: #{e.inspect.to_s}."
+          puts "Error #{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: #{e.inspect.to_s} MESSAGE: #{e.message}."
+          raise GMQ::RCI::ConnectionTimedout, "#{self} #{e.inspect.to_s} - WORKER REQUEST: "+
+          "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
+        # All other errors.
+        rescue Exception => e
+          # we will catch and rethrow the error.
+          logger.error "#{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: MESSAGE: #{e.message} - DETAIL: #{e.inspect.to_s}."
+          puts "Error #{e} while processing #{transaction.id}. "+
+          "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
+          "Error detail: MESSAGE: #{e.message} Detail: #{e.inspect.to_s}."
+          raise e
+        end # end of begin/rescue
       end # end of perform
     end # end of class
   end # end of worker module
