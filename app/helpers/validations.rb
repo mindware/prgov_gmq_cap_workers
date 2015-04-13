@@ -92,7 +92,8 @@ module GMQ
           # raise MissingSSN             if params["ssn"].to_s.length == 0
           raise MissingPassportOrSSN   if (params["ssn"].to_s.length == 0 and
                                            params["passport"].to_s.length == 0)
-          raise MissingLicenseNumber   if params["license_number"].to_s.length == 0
+          raise MissingLicenseNumber   if (params["license_number"].to_s.length == 0 and
+                                          params["passport"].to_s.length == 0)
           raise MissingFirstName       if params["first_name"].to_s.length == 0
           raise MissingLastName        if params["last_name"].to_s.length == 0
           raise MissingResidency       if params["residency"].to_s.length == 0
@@ -120,7 +121,8 @@ module GMQ
                                           !validate_passport(params["passport"])
 
           # Validate the DTOP id:
-          raise InvalidLicenseNumber   if !validate_dtop_id(params["license_number"])
+          raise InvalidLicenseNumber   if !validate_dtop_id(params["license_number"]) and
+                                          params["passport"].to_s.length == 0
 
           raise InvalidFirstName       if !validate_name(params["first_name"])
           raise InvalidMiddleName      if !params["middle_name"].nil? and
@@ -141,7 +143,6 @@ module GMQ
 
           return params
         end
-
 
         # validates parameters for transaction validation requests
         # used when users have the transaction id and want us to

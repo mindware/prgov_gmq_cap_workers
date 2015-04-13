@@ -67,7 +67,8 @@ module GMQ
         query << "&middle_name=#{transaction.middle_name}" if !transaction.middle_name.nil?
         query << "&last_name=#{transaction.last_name}"
         query << "&mother_last_name=#{transaction.mother_last_name}" if !transaction.mother_last_name.nil?
-        query << "&ssn=#{transaction.ssn}"
+        query << "&ssn=#{transaction.ssn}" if transaction.ssn.to_s.length > 0
+        query << "&passport=#{transaction.passport}" if transaction.passport.to_s.length > 0
         query << "&license=#{transaction.license_number}"
         # Due to what we could only describe as an unfortunate accident or
         # evil incarnate joke on SIJC's part, RCI API requires the date
