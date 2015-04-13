@@ -1,5 +1,7 @@
 # Andrés Colón Pérez - office of the CIO 2014
 require 'app/helpers/config'
+require 'app/models/statistics'
+
 module GMQ
 	module Workers
 		module LibraryHelper
@@ -52,7 +54,7 @@ module GMQ
 			# This method is also the primary way for logging information.
 			# As such, we don't return immediately if debug is false. We let the
 			# system log properly, and skip display info if debug is false.
-			def debug(str, use_title=false, use_prefix=true, log_type="info")s
+			def debug(str, use_title=false, use_prefix=true, log_type="info")
 				  title = "DEBUG: "   if use_title
 					prefix = str_prefix.brown	if use_prefix
 				  # print to screen
