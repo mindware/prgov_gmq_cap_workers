@@ -4,6 +4,9 @@ require 'app/helpers/config'
 
 require 'app/models/transaction'
 
+
+# This is unused.
+
 module GMQ
   module Workers
     class FinalEmailWorker < GMQ::Workers::BaseWorker

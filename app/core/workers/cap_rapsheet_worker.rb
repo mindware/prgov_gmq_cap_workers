@@ -154,27 +154,51 @@ module GMQ
                 puts "Error: #{e} ocurred"
               end
 
+              if language == "english"
+                subject = "We could not validate your information",
+                message = "The information provided to us did not match "+
+                          "that which is stored in our government systems. "+
+                          "When requesting a Goodstanding Certificate "+
+                          "it's important to make sure that the information "+
+                          "you provide matches exactly the information "+
+                          "as it appears in the ID of the "+
+                          "identification method you've selected.\n\n"+
+                          "RCI Error: #{json["message"]}"
+                html = "The information provided to us did not match "+
+                          "that which is stored in our government systems. "+
+                          "When requesting a Goodstanding Certificate "+
+                          "it's important to make sure that the information "+
+                          "you provide matches exactly the information "+
+                          "as it appears in the identification of the "+
+                          "identification method you've selected.\n\n"+
+                          "<i>RCI Error: #{json["message"]}</i>"
+              else
+                # spanish
+                subject = "Error en la validación de su solicitud",
+                message = "Le informamos que la información "+
+                          "tal como nos fue suministrada no pudo ser "+
+                          "corroborada en los sistemas gubernamentales.\n\n"+
+                          "Al solicitar el Certificado de Antecedentes "+
+                          "Penales debe asegurarse solicitar con la "+
+                          "informacióntal tal cual "+
+                          "aparece en la identificación del metodo de "+
+                          "identificación seleccionado.\n\n"+
+                          "RCI Error: #{json["message"]}"
+                html =    "Le informamos que la información "+
+                          "tal como nos fue suministrada no pudo ser "+
+                          "corroborada en los sistemas gubernamentales.\n\n"+
+                          "Al solicitar el Certificado de Antecedentes "+
+                          "Penales debe asegurarse solicitar con la "+
+                          "informacióntal tal cual "+
+                          "aparece en la identificación del metodo de "+
+                          "identificación seleccionado.\n\n"+
+                          "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
+              end
               Resque.enqueue(GMQ::Workers::EmailWorker, {
                   "id"   => transaction.id,
-                  "subject" => "Error en la validación de su solicitud",
-                  "text" => "Le informamos que la información "+
-                            "tal como nos fue suministrada no pudo ser "+
-                            "corroborada en los sistemas gubernamentales.\n\n"+
-                            "Al solicitar el Certificado de Antecedentes "+
-                            "Penales debe asegurarse solicitar con la "+
-                            "informacióntal tal cual "+
-                            "aparece en la identificación del metodo de "+
-                            "identificación seleccionado.\n\n"+
-                            "RCI Error: #{json["message"]}",
-                  "html" => "Le informamos que la información "+
-                            "tal como nos fue suministrada no pudo ser "+
-                            "corroborada en los sistemas gubernamentales.\n\n"+
-                            "Al solicitar el Certificado de Antecedentes "+
-                            "Penales debe asegurarse solicitar con la "+
-                            "informacióntal tal cual "+
-                            "aparece en la identificación del metodo de "+
-                            "identificación seleccionado.\n\n"+
-                            "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>"),
+                  "subject" => subject,
+                  "text" => message,
+                  "html" => html,
               })
 
               # ENQUE WORKER to notify USER of faliled communication

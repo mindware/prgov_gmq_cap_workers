@@ -34,13 +34,34 @@ module GMQ
               puts "Created a valid PDF file in #{file}."
               logger.info "Created a valid PDF file in #{file}."
 
-              Resque.enqueue(GMQ::Workers::FinalEmailWorker, {
-                  "id"   => transaction.id,
-                  "file_path" => file,
-                  "file_rename" => "certificado_prgov.pdf",
-                  "text" => "Your certificate is ready.",
-                  "html" => "<b>Your certificate is ready</b>"
-              })
+              if(transaction.language == "english")
+                  Resque.enqueue(GMQ::Workers::FinalEmailWorker, {
+                      "id"   => transaction.id,
+                      "file_path" => file,
+                      "file_rename" => "certificado_prgov.pdf",
+                      "text" => "The result of the Certificate of Goodstanding"+
+                                "request is attached. Thank you for using our "+
+                                "services.",
+                      "html" => "<b>The result of the Certificate of Goodstanding"+
+                                "request is attached. Thank you for using our "+
+                                "services.</b>"
+                  })
+              else
+                  # spanish
+                  Resque.enqueue(GMQ::Workers::FinalEmailWorker, {
+                      "id"   => transaction.id,
+                      "file_path" => file,
+                      "file_rename" => "certificado_prgov.pdf",
+                      "text" => "Le incluimos el resultado de la Solicitud de "+
+                                "Certificado de Antecedentes "+
+                                "Penales adjunto. Gracias por utilizar nuestros "+
+                                "servicios.",
+                      "html" => "<b>Le incluimos el resultado de la Solicitud de "+
+                                "Certificado de Antecedentes "+
+                                "Penales adjunto. Gracias por utilizar nuestros "+
+                                "servicios.</b>"
+                  })
+              end
            else
               puts "Could not create a valid PDF file in #{file}"
               logger.error "Could not create a valid PDF file in #{file}"
