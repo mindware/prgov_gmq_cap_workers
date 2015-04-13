@@ -37,6 +37,7 @@ module GMQ
 
           # Use our GMQ Mailer class to mail the payload.
           if(!Mailer.mail_payload(payload))
+            # if it failed, raise an error so it's retried
             raise
           end
         # Else if no id provided, we allow the custom email through

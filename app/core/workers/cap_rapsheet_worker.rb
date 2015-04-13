@@ -50,6 +50,11 @@ module GMQ
           raise e
         end
 
+        # update the transaction status and save it
+        transaction.status = "processing"
+        transaction.state = :validating_rapsheet_with_sijc
+        transaction.save
+
         # Grab the environment credentials for RCI
         user = ENV["SIJC_RCI_USER"]
         pass = ENV["SIJC_RCI_PASSWORD"]
@@ -98,14 +103,56 @@ module GMQ
           logger.info "HTTP Code: #{response.code}\n"+
                       "Headers: #{response.headers}\n"+
                       "Result: #{response.to_str}\n"
+          puts        "HTTP Code: #{response.code}\n"+
+                      "Headers: #{response.headers}\n"+
+                      "Result: #{response.to_str}\n"
           case response.code
             when 200
+
+              # Try to update the transaction info and stats,
+              # ignore it if it fails. We have to ignore because
+              # a retry at this step would result in multiple
+              # calls and callbacks to RCI's API because of this
+              # step, so we try and otherwise ignore any failures.
+              # we don't want users or rci getting spammed.
+              begin
+                transaction.identity_validated = true
+                transaction.location = "SIJC RCI"
+                transaction.status = "processing"
+                transaction.state = :waiting_for_sijc_to_generate_cert
+                transaction.save
+                # update global statistics
+                transaction.remove_pending
+                transaction.add_completed
+                # done - return reponse and wait for our sijc callback
+              rescue Exception => e
+                # continue
+                puts "Error: #{e} ocurred"
+              end
+              # return the response
               response
             when 400
               json = JSON.parse(response)
               logger.error "RCI ERROR PAYLOAD: #{json["status"]} - "+
                                               "#{json["code"]} - "+
                                               "#{json["message"]}"
+              # Try to update the transaction status,
+              # ignore it if it fails.
+              begin
+                # update the transaction
+                transaction.identity_validated = false
+                transaction.location = "Mail"
+                # TODO: update this status later so that if
+                # its a fuzzy result we mark as waiting
+                transaction.status = "completed"
+                transaction.state = :failed_validating_rapsheet_with_sijc
+                transaction.save
+                # update global statistics
+                transaction.remove_pending
+                transaction.add_completed
+              rescue Exception => e
+                puts "Error: #{e} ocurred"
+              end
 
               Resque.enqueue(GMQ::Workers::EmailWorker, {
                   "id"   => transaction.id,
@@ -135,7 +182,9 @@ module GMQ
 
               # Here we should go error by error to identify exactly
               # what SIJC mentioned and deal with it accordingly
-              # and notify the user. We need to catch each error.
+              # and notify the user after x amount of failures.
+              # We could catch each error eventually, for now
+              # a generic catch for 400s.
 
               # Eror Responses
               # Description
@@ -202,10 +251,14 @@ module GMQ
               # 3002
               #
               # Multiple results found on external service. DTOP.
-              # The service couldn’t identify precisely the information submitted. This is what we call a fuzzy search.
+              # The service couldn’t identify precisely the information submitted.
+              # How this differs from a fuzzy search isn't clear.
               # 400
               # 3003
               #
+              # DTOP service is down or having a problem.
+              # 500
+              # 4000
               #
               # Fuzzy Search. Couldn't identify properly the profile on the criminal record registry.
               # The document store is having problems persisting requests or it’s simply down.
@@ -223,6 +276,29 @@ module GMQ
             # retried. Here we allow RestClient to raise an Exception
             # which will be caught by the system and retried.
             when 500
+              # do proper notification of the problem:
+              logger.error "#{self} received 500 error when processing "+
+              "#{transaction.id} and connecting to URL: #{a.site}, METHOD: "+
+              "#{a.method}, TYPE: #{a.type}."
+              puts "#{self} received 500 error when processing "+
+              "#{transaction.id} and connecting to URL: #{a.site}, METHOD: "+
+              "#{a.method}, TYPE: #{a.type}."
+
+              # add error statistics to this transaction
+              # later we could check wether the error is
+              # a specific code or not.
+              begin
+                transaction.rci_error_count = (transaction.rci_error_count.to_i) + 1
+                transaction.rci_error_date  = Time.now
+                transaction.last_error_type = "#{e}"
+                transaction.last_error_date = Time.now
+                transaction.status = "waiting"
+                transaction.state = :failed_validating_rapsheet_with_sijc
+                transaction.save
+              rescue Exception => e
+                puts "Error: #{e} ocurred"
+              end
+
               response.return!(request, result, &block)
             # Any other http error codes are processed. Such as 301, 302
             # redirections, etc are properly processed and we allow Restclient
@@ -238,9 +314,21 @@ module GMQ
           puts "Error #{e} while processing #{transaction.id}. "+
           "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
           "Error detail: #{e.inspect.to_s} MESSAGE: #{e.message}."
+          # add error statistics to this transaction
+          begin
+            transaction.rci_error_count = (transaction.rci_error_count.to_i) + 1
+            transaction.rci_error_date  = Time.now
+            transaction.last_error_type = "#{e}"
+            transaction.last_error_date = Time.now
+            transaction.status = "waiting"
+            transaction.state = :failed_validating_rapsheet_with_sijc
+            transaction.save
+          rescue Exception => e
+            # continue
+            puts "Error: #{e} ocurred"
+          end
           raise GMQ::RCI::ApiError, "#{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
-
         # Timed out - Happens when a network error doesn't permit
         # us to communicate with the remote API.
         rescue Errno::ETIMEDOUT => e
@@ -250,6 +338,22 @@ module GMQ
           puts "Error #{e} while processing #{transaction.id}. "+
           "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
           "Error detail: #{e.inspect.to_s} MESSAGE: #{e.message}."
+
+          # add error statistics to this transaction but ignore
+          # any errors when doing so
+          begin
+            transaction.rci_error_count = (transaction.rci_error_count.to_i) + 1
+            transaction.rci_error_date  = Time.now
+            transaction.last_error_type = "#{e}"
+            transaction.last_error_date = Time.now
+            transaction.status = "waiting"
+            transaction.state = :failed_validating_rapsheet_with_sijc
+            transaction.save
+          rescue Exception => e
+            # ignore errors and continue
+            puts "Error: #{e} ocurred"
+          end
+
           raise GMQ::RCI::ConnectionTimedout, "#{self} #{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
         # All other errors.
@@ -261,6 +365,22 @@ module GMQ
           puts "Error #{e} while processing #{transaction.id}. "+
           "WORKER REQUEST: URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type} "+
           "Error detail: MESSAGE: #{e.message} Detail: #{e.inspect.to_s}."
+          # add error statistics to this transaction
+          # errors here might include things that won't let us perform
+          # this step, so we wrap this in a begin/rescue and ignore errors
+          # from this attempt. If it works great, if not. Read the logs.
+          begin
+            transaction.rci_error_count = (transaction.rci_error_count.to_i) + 1
+            transaction.rci_error_date  = Time.now
+            transaction.last_error_type = "#{e}"
+            transaction.last_error_date = Time.now
+            transaction.status = "waiting"
+            transaction.state = :failed_validating_rapsheet_with_sijc
+            transaction.save
+          rescue Exception => e
+            puts "Error: #{e} ocurred"
+          end
+          # now raise the error
           raise e
         end # end of begin/rescue
       end # end of perform
