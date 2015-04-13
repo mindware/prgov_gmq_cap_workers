@@ -96,6 +96,8 @@ module GMQ
 							add_file :filename => "#{data["file_rename"]}",
 											 :content => data["file_content"]
 						end
+						# Set the charset
+						charset = "UTF-8"
 			    end # end of mail
 					# empty the data payload
 					data = nil
