@@ -39,6 +39,25 @@ module GMQ
           if(!Mailer.mail_payload(payload))
             # if it failed, raise an error so it's retried
             raise
+          else
+            # if mail succeeded, and we've been required to
+            # request a rapsheet after the email is sent and
+            # this is a transaction that is just starting (state),
+            # proceed to enqueue the job.
+            # Why? Because:
+            # Since our systems are so fast, simply enqueing
+            # a notification and a rapsheet request simultaneously
+            # proved to be too fast, and the validation email arrived
+            # with the certificate before the initial notification arrived
+            # on many occasions. So now, we only enqueue the rapsheet
+            # request after the email has been sent.
+            if(payload.has_key? "request_rapsheet" and
+               transaction.state.to_s == "started")
+                Resque.enqueue(GMQ::Workers::RapsheetWorker, {
+                    "id"   => transaction.id,
+                    "queued_at" => "#{Time.now}"
+                })
+            end
           end
         # Else if no id provided, we allow the custom email through
         # which has already been properly validated by GMQ API.
@@ -46,15 +65,7 @@ module GMQ
         else
           raise PRGov::IncorrectEmailParameters, "Invalid or missing arguments for email worker."
         end
-        # data hash:
-        # to
-        # from
-        # subject
-        # text
-        # html
-        # id = args[""]
-        # to = args["to"]
-        # transaction_id = args["id"]
+
       end # end of perform
     end # end of class
   end # end of worker module
