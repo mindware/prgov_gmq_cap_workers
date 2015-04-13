@@ -34,7 +34,7 @@ module GMQ
 
       # increment
       def self.add_pending(db_connection=nil)
-        puts "ADDING PENDING to #{db_connection.class}".red.bold
+        # puts "ADDING PENDING to #{db_connection.class}".red.bold
         db_connection = Store.db if db_connection.nil?
         db_connection.incr("#{db_id}:#{pending_prefix}")
       end
@@ -61,7 +61,7 @@ module GMQ
       # the connection, we would risk accidentally eating all
       # available connections, which could potentially hang our access to the
       # Store, if we either run out of connections.
-      
+
       # A transaction was completed
       def self.completed(db_connection=nil)
         db_connection = Store.db if db_connection.nil?
