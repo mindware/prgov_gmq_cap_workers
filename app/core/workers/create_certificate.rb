@@ -39,10 +39,10 @@ module GMQ
                       "id"   => transaction.id,
                       "file_path" => file,
                       "file_rename" => "certificado_prgov.pdf",
-                      "text" => "The result of the Certificate of Goodstanding"+
+                      "text" => "The result of the Certificate of Goodstanding "+
                                 "request is attached. Thank you for using our "+
                                 "services.",
-                      "html" => "<b>The result of the Certificate of Goodstanding"+
+                      "html" => "<b>The result of the Certificate of Goodstanding "+
                                 "request is attached. Thank you for using our "+
                                 "services.</b>"
                   })
