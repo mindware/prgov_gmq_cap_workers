@@ -154,8 +154,8 @@ module GMQ
                 puts "Error: #{e} ocurred"
               end
 
-              if language == "english"
-                subject = "We could not validate your information",
+              if transaction.language == "english"
+                subject = "We could not validate your information"
                 message = "The information provided to us did not match "+
                           "that which is stored in our government systems. "+
                           "When requesting a Goodstanding Certificate "+
@@ -174,7 +174,7 @@ module GMQ
                           "<i>RCI Error: #{json["message"]}</i>"
               else
                 # spanish
-                subject = "Error en la validación de su solicitud",
+                subject = "Error en la validación de su solicitud"
                 message = "Le informamos que la información "+
                           "tal como nos fue suministrada no pudo ser "+
                           "corroborada en los sistemas gubernamentales.\n\n"+
