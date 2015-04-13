@@ -3,6 +3,7 @@
 require 'resolv'
 require 'date'
 require 'base64'                 # used to validate certificates
+require 'app/helpers/errors'		 # defines and catches errors
 
 # A module for methods used to validate data, such as valid
 # transaction parameters, social security numbers, emails and the like.
@@ -13,6 +14,8 @@ module GMQ
         ##            Constants:               #
         ########################################
 
+        PASSPORT_MIN_LENGTH     = 9
+        PASSPORT_MAX_LENGTH     = 20
         SSN_LENGTH              = 9       # In 2014 SSN length was 9 digits.
         MAX_EMAIL_LENGTH        = 254     # IETF maximum length RFC3696/Errata ID: 1690
         DTOP_ID_MAX_LENGTH      = 20      # Arbitrarily selected length. Review this!
@@ -38,6 +41,23 @@ module GMQ
           raise InvalidTransactionId     if !validate_transaction_id(params["id"])
           raise MissingCertificateBase64 if params["certificate_base64"].to_s.length == 0
           raise InvalidCertificateBase64 if !validate_certificate_base64(params["certificate_base64"])
+          return params
+        end
+
+        # validates requests to send email messages through the GMQ
+        def validate_email_parameters(params, whitelist)
+          # delets all non-whitelisted params, and returns a safe list.
+          params = trim_whitelisted(params, whitelist)
+          # Check for missing parameters
+          raise MissingEmailFromAddress       if params["from"].to_s.length == 0
+          raise MissingEmailToAddress         if params["to"].to_s.length == 0
+          raise MissingEmailSubject           if params["subject"].to_s.length == 0
+          raise MissingEmailText              if params["text"].to_s.length == 0
+          # Perform validations
+          # raise InvalidEmailSubject          if <consider validations here>
+          raise InvalidEmailFromAddress        if !validate_email(params["from"])
+          raise InvalidEmailToAddress          if !validate_email(params["to"])
+
           return params
         end
 
@@ -69,8 +89,11 @@ module GMQ
 
           # Return proper errors if parameter is missing:
           raise MissingEmail           if params["email"].to_s.length == 0
-          raise MissingSSN             if params["ssn"].to_s.length == 0
-          raise MissingLicenseNumber   if params["license_number"].to_s.length == 0
+          # raise MissingSSN             if params["ssn"].to_s.length == 0
+          raise MissingPassportOrSSN   if (params["ssn"].to_s.length == 0 and
+                                           params["passport"].to_s.length == 0)
+          raise MissingLicenseNumber   if (params["license_number"].to_s.length == 0 and
+                                          params["passport"].to_s.length == 0)
           raise MissingFirstName       if params["first_name"].to_s.length == 0
           raise MissingLastName        if params["last_name"].to_s.length == 0
           raise MissingResidency       if params["residency"].to_s.length == 0
@@ -80,15 +103,26 @@ module GMQ
           raise MissingLanguage        if params["language"].to_s.length == 0
 
           # Validate the Email
-          raise InvalidEmail           if validate_email(params["email"])
+          raise InvalidEmail           if !validate_email(params["email"])
+
+          # User must provide either passport or SSN. Let's check if
+          # one or the other is invalid.
 
           # Validate the SSN
           # we eliminate any potential dashes in ssn
-          params["ssn"]                 = params["ssn"].gsub("-", "").strip
-          raise InvalidSSN             if !validate_ssn(params["ssn"])
+          params["ssn"] = params["ssn"].to_s.gsub("-", "").strip
+          # raise InvalidSSN             if !validate_ssn(params["ssn"])
+          raise InvalidSSN             if params["ssn"].to_s.length > 0 and
+                                          !validate_ssn(params["ssn"])
+          # Validate the Passport
+          # we eliminate any potential dashes in the passport before validation
+          params["passport"] = params["passport"].to_s.gsub("-", "").strip
+          raise InvalidPassport        if params["passport"].to_s.length > 0 and
+                                          !validate_passport(params["passport"])
 
           # Validate the DTOP id:
-          raise InvalidLicenseNumber   if !validate_dtop_id(params["license_number"])
+          raise InvalidLicenseNumber   if !validate_dtop_id(params["license_number"]) and
+                                          params["passport"].to_s.length == 0
 
           raise InvalidFirstName       if !validate_name(params["first_name"])
           raise InvalidMiddleName      if !params["middle_name"].nil? and
@@ -106,6 +140,35 @@ module GMQ
           raise InvalidClientIP        if !validate_ip(params["IP"])
           raise InvalidReason          if params["reason"].to_s.strip.length > 255
           raise InvalidLanguage        if !validate_language(params["language"])
+
+          return params
+        end
+
+        # validates parameters for transaction validation requests
+        # used when users have the transaction id and want us to
+        # check if the transaction is really valid to us.
+        def validate_transaction_validation_parameters(params, whitelist)
+          # delets all non-whitelisted params, and returns a safe list.
+          params = trim_whitelisted(params, whitelist)
+
+          # Return proper errors if parameter is missing:
+          raise MissingTransactionTxId if params["tx_id"].to_s.length == 0
+          raise InvalidTransactionId   if !validate_transaction_id(params["tx_id"])
+          raise MissingPassportOrSSN   if (params["ssn"].to_s.length == 0 and
+                                           params["passport"].to_s.length == 0)
+          raise MissingClientIP        if params["IP"].to_s.length == 0
+          # Validate the SSN
+          # we eliminate any potential dashes in ssn
+          params["ssn"]  = params["ssn"].to_s.gsub("-", "").strip
+          raise InvalidSSN             if params["ssn"].to_s.length > 0 and
+                                          !validate_ssn(params["ssn"])
+          # Validate the Passport
+          # we eliminate any potential dashes in the passport before validation
+          params["passport"] = params["passport"].to_s.gsub("-", "").strip
+          raise InvalidPassport        if params["passport"].to_s.length > 0 and
+                                          !validate_passport(params["passport"])
+          # everything else:
+          raise InvalidClientIP        if !validate_ip(params["IP"])
 
           return params
         end
@@ -145,7 +208,8 @@ module GMQ
             false
           end
         end
-        # Validates a date as UTC
+
+        # Validates a date
         def validate_date(date)
           begin
             Date.parse(date.to_s)
@@ -200,6 +264,18 @@ module GMQ
           end
         end
 
+        # Validate Passport number
+        def validate_passport(value)
+          return false if value.to_s.length == 0
+          # validates if its has proper length
+          if(value.length >= PASSPORT_MIN_LENGTH and
+             value.length <= PASSPORT_MAX_LENGTH)
+            return true
+          else
+            return false
+          end
+        end
+
         # Check the email address
         def validate_email(value)
           # For email length, the source was:
@@ -212,8 +288,8 @@ module GMQ
           # independently, so for now simply check against the RFC 2822,
           # RFC 3696 and the filters in the gem.
           return true if (ValidatesEmailFormatOf::validate_email_format(value).nil? and
-                   value.to_s.length > MAX_EMAIL_LENGTH )
-          return false
+                   value.to_s.length < MAX_EMAIL_LENGTH ) #ok
+          return false #fail
         end
 
         # validates if a string is an integer
