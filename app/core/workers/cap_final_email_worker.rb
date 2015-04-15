@@ -47,6 +47,7 @@ module GMQ
               if(File.extname(params["file_path"]) == ".pdf")
                  # if the pdf exists, delete it
                  if File.exists?(params["file_path"])
+                   logger.info "#{self} is deleting file #{params["file_path"]}."
                     File.delete(params["file_path"])
                  else
                     logger.error "#{self} could not cleanup delete "+
