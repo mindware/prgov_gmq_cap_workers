@@ -23,52 +23,72 @@ module GMQ
           # BaseWorker will not retry a job for a transaction that is not found.
           transaction = Transaction.find(payload["id"])
 
-          puts "Found Transaction email: #{transaction.email}".red
+          logger.info "#{self} is processing #{transaction.email}"
 
           # Append the email
           payload["to"] = transaction.email
           payload["from"]  = Config.all["system"]["smtp"]["from"]
-          payload["subject"] = "PR.Gov Certificado de Buena Conducta / Goodstanding Certificate"
+          if(transaction.language == "english")
+            payload["subject"] = "PR.Gov - Good Standing Certificate Attached"
+          else
+            payload["subject"] = "PR.Gov - Adjunto Certificado de Antecedentes Penales"
+          end
 
           # Use our GMQ Mailer class to mail the payload.
-          Mailer.mail_payload(payload)
+          if(Mailer.mail_payload(payload))
+              logger.info "#{self} Successfully mailed certificate to #{transaction.email} for #{transaction.id}."
+              # Clean up the files before we even think of updating the
+              # transaction. We want to make sure the file system gets cleaned
+              # before we risk a failure on saving in the db
+              #
+              # Now. If the file is a PDF, then we proceed to delete
+              # what the worker was asked to delete. Yeah, let's not trust
+              # ourselves.
+              if(File.extname(params["file_path"]) == ".pdf")
+                 # if the pdf exists, delete it
+                 if File.exists?(params["file_path"])
+                    File.delete(params["file_path"])
+                 else
+                    logger.error "#{self} could not cleanup delete "+
+                                 "#{params["file_path"]}. Odd, the file "+
+                                 "was not found but it was our responsability "+
+                                 "to delete it."
+                 end
+                 # log it
+                 logger.info "#{self} - Cleanup Deleted #{params["file_path"]}."
+              else
+                logger.error "#{self} was unauthorized by worker logic to attempt "+
+                            "to delete #{params["file_path"]}."
+              end
 
-          # IMPORTANT THINGS TODO HERE!
-          # TODO We should check here how the transaction ended in this final
-          # email. Did things go ok? Did things go astray? Note it down update
-          # the status, state and stats.
-          #
-          # if (something bad happened)
-          #  <do something / update>
-          # else
-            # Everything went fine:
-            # Close the transaction
-            logger.info "Mail sent. Here we would update transaction state and statistics."
-            # logger.info "Mail sent. Updating transaction state and statistics."
-            # transaction.status = "completed"
-            # transaction.state = "finished"
-            # transaction.save
-            # update statistics
-            # TODO ideally all of this will be done against the API instead of
-            # directly into the DB
-            # add_completed
-          # end
+              # Try to update the transaction status,
+              # ignore it if it fails.
+              begin
+                # update the transaction
+                transaction.location = "Mail"
+                transaction.status = "finished"
+                transaction.state = :done_mailing_certificate
+                transaction.save
+                # update global statistics
+                transaction.remove_pending
+                transaction.add_completed
+              rescue Exception => e
+                puts "Error: #{e} ocurred"
+                logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
+              end
+          else
+            # we have to test to see if this is ever really reached.
+            logger.info "#{self} could not mail #{transaction.email} for #{transaction.id}."
+            raise Exception, "Could not mail the email for #{transaction.id}. Let's retry"
+          end
 
         else
-          puts "\n\nNO PAYLOAD #{payload}\n\n"
+          # puts "\n\nNO PAYLOAD #{payload}\n\n"
+          logger.error "#{self} received no payload parameters."
           raise IncorrectEmailParameters, "Invalid arguments. Text and html "+
                                           "parameters are required for email "+
                                           "worker."
         end
-        # data hash:
-        # to
-        # from
-        # subject
-        # text
-        # html
-        # id = args[""]
-        # to = args["to"]
-        # transaction_id = args["id"]
       end # end of perform
     end # end of class
   end # end of worker module

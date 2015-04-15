@@ -122,9 +122,13 @@ module GMQ
                 transaction.status = "processing"
                 transaction.state = :waiting_for_sijc_to_generate_cert
                 transaction.save
-                # update global statistics
-                transaction.remove_pending
-                transaction.add_completed
+                # # update global statistics
+                # TODO: we whould only update a new type of completed
+                # relating to positive or negative validations. Only
+                # the final email worker will mark remove pending and completed.
+                # so commenting for now:
+                # transaction.remove_pending
+                # transaction.add_completed
                 # done - return reponse and wait for our sijc callback
               rescue Exception => e
                 # continue
@@ -137,6 +141,7 @@ module GMQ
               logger.error "RCI ERROR PAYLOAD: #{json["status"]} - "+
                                               "#{json["code"]} - "+
                                               "#{json["message"]}"
+
               # Try to update the transaction status,
               # ignore it if it fails.
               begin
@@ -153,6 +158,7 @@ module GMQ
                 transaction.add_completed
               rescue Exception => e
                 puts "Error: #{e} ocurred"
+                logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
               end
 
               if transaction.language == "english"
@@ -195,6 +201,7 @@ module GMQ
                           "identificación seleccionado.\n\n"+
                           "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
               end
+              logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
               Resque.enqueue(GMQ::Workers::EmailWorker, {
                   "id"   => transaction.id,
                   "subject" => subject,
@@ -317,7 +324,7 @@ module GMQ
                 transaction.rci_error_date  = Time.now
                 transaction.last_error_type = "#{e}"
                 transaction.last_error_date = Time.now
-                transaction.status = "waiting"
+                transaction.status = "retrying"
                 transaction.state = :failed_validating_rapsheet_with_sijc
                 transaction.save
               rescue Exception => e
@@ -345,7 +352,7 @@ module GMQ
             transaction.rci_error_date  = Time.now
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
-            transaction.status = "waiting"
+            transaction.status = "retrying"
             transaction.state = :failed_validating_rapsheet_with_sijc
             transaction.save
           rescue Exception => e
@@ -371,7 +378,7 @@ module GMQ
             transaction.rci_error_date  = Time.now
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
-            transaction.status = "waiting"
+            transaction.status = "retrying"
             transaction.state = :failed_validating_rapsheet_with_sijc
             transaction.save
           rescue Exception => e

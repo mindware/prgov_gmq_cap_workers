@@ -34,6 +34,19 @@ module GMQ
               puts "Created a valid PDF file in #{file}."
               logger.info "Created a valid PDF file in #{file}."
 
+              # Try to update the transaction status,
+              # ignore it if it fails.
+              begin
+                # update the transaction
+                transaction.location = "PR.Gov GMQ"
+                transaction.status = "processing"
+                transaction.state = :mailing_certificate
+                transaction.save
+              rescue Exception => e
+                puts "Error: #{e} ocurred"
+                logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
+              end
+
               if(transaction.language == "english")
                   Resque.enqueue(GMQ::Workers::FinalEmailWorker, {
                       "id"   => transaction.id,
