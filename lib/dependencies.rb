@@ -23,6 +23,12 @@ GMQ::Workers::Config.check
 # TODO: update this later so that resque gains db reconnection capabilities
 Resque.redis = GMQ::Workers::Store.db
 
+# This is the recommended way to configure Resque but
+# it errors out. So we use what's above.
+# Resque.configure do |configuration|
+#   configuration.redis = GMQ::Workers::Store.db
+# end
+
 # require our jobs & application code.
 # We'll require all existing workers in the core/workers directory
 # These are used both by the Resque workers as well as the Resque-web

@@ -51,9 +51,21 @@ module GMQ
 
       # The first delay will be 0 seconds, the 2nd will be 60 seconds, etc.
       # The backoff strategy basically means, for example [0, 10, 600, etc..]:
-      #                   10s, 1m, 10m,   1h,    3h,    6h. etc.
-      # Vamos a hacerlo a dos meses.
-      @backoff_strategy = [10, 60, 600, 3600, 10800, 21600]
+      #                   10s, 1m, 10m,   1h,    3h,    6h, 12hr,  1day, 3days,
+      #                   7days, 2weeks
+      # Vamos a hacerlo a dos semanas.
+      @backoff_strategy = [10, 60, 600, 3600, 10800, 21600, 43200, 86400, 259200,
+                           604800, 1209600]
+
+      # Allow the Redis to expire stale retry counters from the database by
+      # setting the following. This saves us from having to run a
+      # "house cleaning" or "errand" job.
+      # The expiary timeout is "pushed forward" or "touched" after each
+      # failure to ensure its not expired too soon.
+      #
+      # We've yet to receive confirmation if this works with
+      # backoff_strategy. 
+      # @expire_retry_key_after = 3600
 
       # The delay values will be multiplied by a random Float value between
       # retry_delay_multiplicand_min and retry_delay_multiplicand_max (both have a

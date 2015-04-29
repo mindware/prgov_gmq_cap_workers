@@ -45,17 +45,6 @@ module GMQ
           # of the new backend you install. At this time, it catches
           # Redis Errors.
 
-          # I've tested this by killing the storage server and
-          # later reconnecting. The system automatically reconnects after
-          # failure.
-
-          # Todo:
-          # We later could add selection of the host based on failure. We
-          # could alternate between known hosts (keys) based on the availability
-          # Todo cancelled:
-          # However: by using twemproxy we've eliminated the need to do the
-          # manual hopping among hosts. And we'll alternate between twemproxies
-          # using VRRP.
           if(@db.nil?)
               # First we choose the driver. By default we use the synchrony one.
               # If we weren't running on Eventmachine, we'd use a different one
@@ -65,7 +54,7 @@ module GMQ
               @db = Redis.new(:host =>   Config.db_host,
                               :port =>   Config.db_port,
                               :db     => Config.db_id,
-			      :password => Config.db_password)
+			                        :password => Config.db_password)
           else
               @db
           end
