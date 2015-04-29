@@ -122,13 +122,6 @@ module GMQ
                 transaction.status = "processing"
                 transaction.state = :waiting_for_sijc_to_generate_cert
                 transaction.save
-                # # update global statistics
-                # TODO: we whould only update a new type of completed
-                # relating to positive or negative validations. Only
-                # the final email worker will mark remove pending and completed.
-                # so commenting for now:
-                # transaction.remove_pending
-                # transaction.add_completed
                 # done - return reponse and wait for our sijc callback
               rescue Exception => e
                 # continue
@@ -163,16 +156,20 @@ module GMQ
 
               if transaction.language == "english"
                 subject = "We could not validate your information"
-                message = "The information provided to us did not match "+
-                          "that which is stored in our government systems. "+
+                message = "We regret to inform you that the information "+
+                          "provided to us on #{transaction.created_at}, for "+
+                          "the request #{transaction.id}, did not match "+
+                          "the information stored in our government systems. "+
                           "When requesting a Goodstanding Certificate "+
                           "it's important to make sure that the information "+
                           "you provide matches exactly the information "+
                           "as it appears in the ID of the "+
                           "identification method you've selected.\n\n"+
                           "RCI Error: #{json["message"]}"
-                html = "The information provided to us did not match "+
-                          "that which is stored in our government systems. "+
+                html =    "We regret to inform you that the information provided "+
+                          "to us on #{transaction.created_at}, for the "+
+                          "request #{transaction.id}, did not match "+
+                          "the information stored in our government systems. "+
                           "When requesting a Goodstanding Certificate "+
                           "it's important to make sure that the information "+
                           "you provide matches exactly the information "+
@@ -183,21 +180,25 @@ module GMQ
                 # spanish
                 subject = "Error en la validación de su solicitud"
                 message = "Le informamos que la información "+
-                          "tal como nos fue suministrada no pudo ser "+
-                          "corroborada en los sistemas gubernamentales.\n\n"+
+                          "tal como nos fue suministrada en la fecha "+
+                          "#{transaction.created_at}, para la solicitud "+
+                          "con el número '#{transaction.id}', no pudo ser "+
+                          "identificada en los sistemas gubernamentales.\n\n"+
                           "Al solicitar el Certificado de Antecedentes "+
                           "Penales debe asegurarse solicitar con la "+
-                          "informacióntal tal cual "+
-                          "aparece en la identificación del metodo de "+
+                          "información tal cual "+
+                          "aparece en la identificación del método de "+
                           "identificación seleccionado.\n\n"+
                           "RCI Error: #{json["message"]}"
                 html =    "Le informamos que la información "+
-                          "tal como nos fue suministrada no pudo ser "+
-                          "corroborada en los sistemas gubernamentales.\n\n"+
+                          "tal como nos fue suministrada en la fecha "+
+                          "#{transaction.created_at}, para la solicitud "+
+                          "con el número '#{transaction.id}', no pudo ser "+
+                          "identificada en los sistemas gubernamentales.\n\n"+
                           "Al solicitar el Certificado de Antecedentes "+
                           "Penales debe asegurarse solicitar con la "+
-                          "informacióntal tal cual "+
-                          "aparece en la identificación del metodo de "+
+                          "información tal cual "+
+                          "aparece en la identificación del método de "+
                           "identificación seleccionado.\n\n"+
                           "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
               end
@@ -287,6 +288,11 @@ module GMQ
               # How this differs from a fuzzy search isn't clear.
               # 400
               # 3003
+              #
+              #
+              # One or more of the antecedents found don't have a final disposition.
+              # Further analysis is required.","status":400,"code":3004}
+              #
               #
               # DTOP service is down or having a problem.
               # 500
