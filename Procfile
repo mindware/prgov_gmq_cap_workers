@@ -13,4 +13,4 @@ gmq-workers: bundle exec rake resque:work QUEUE=prgov_cap COUNT=3 TERM_CHILD=1 V
 #worker-production:     bundle exec rake resque:work QUEUE=prgov_cap COUNT=5 TERM_CHILD=1
 
 # Resque-web interface:
-resque-web: bundle exec rackup -p 5678 config.ru
+#resque-web: bundle exec rackup -p 5678 config.ru

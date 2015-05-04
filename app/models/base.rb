@@ -8,6 +8,8 @@
 # which as an example, could translate to:
 # ie: gmq:cap:list:01
 
+require 'app/helpers/validations'
+
 module GMQ
   module Workers
     class Base
@@ -46,9 +48,12 @@ module GMQ
         "#{self.system_prefix}:#{self.db_prefix}"
       end
 
-      # This is redefined by the class.
+      # The name of the key that will hold our
+      # pending jobs in queue for the workers.
+      # This must match the same key that is monitored
+      # by the workers.
       def self.queue_pending_prefix
-        "pending"
+        "prgov_cap"
       end
 
 
@@ -61,12 +66,12 @@ module GMQ
         "#{self.db_global_prefix}:#{self.db_list_prefix}"
       end
 
-      # Queues are stored at the system level and are not specific
-      # to a db. For example, new transactions to be processed are
-      # stored in the queue called pending, regardless if they're
-      # Transactions for service A or any other service.
+      # Transactions to be processed by the worker components
+      # of the GMQ, must be saved in the proper keys. Resque
+      # uses its own key-space, titled 'resque:queue:', in our
+      # case we'll use 'resque:queue:prgov_cap'.
       def self.queue_pending
-        "#{self.system_prefix}:#{self.queue_pending_prefix}"
+          "resque:queue:#{self.queue_pending_prefix}"
       end
 
       # Redefine this per class to store whatever information

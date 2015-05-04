@@ -26,6 +26,7 @@ Pending:
 19. Add real code to the mainteance mode in the base worker
 20. config logger with loggin strategy smiliar to GMQ for space utilization
 21. Either fully adopt config user.json and authentication.rb module or remove it and continue with .env not both
+22. move to rest-client from rest_client
 Done:
 1. rapsheetworker: do not retry if LocalTransactionNotFound
 2. Dont retry RapsheetWorker or any worker if tx ID is not found. If it is invalid.

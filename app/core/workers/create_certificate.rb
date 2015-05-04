@@ -38,7 +38,7 @@ module GMQ
               # ignore it if it fails.
               begin
                 # update the transaction
-                transaction.location = "PR.Gov GMQ"
+                transaction.location = "PR.gov GMQ"
                 transaction.status = "processing"
                 transaction.state = :mailing_certificate
                 transaction.save
@@ -52,11 +52,14 @@ module GMQ
                       "id"   => transaction.id,
                       "file_path" => file,
                       "file_rename" => "certificado_prgov.pdf",
-                      "text" => "The result of the Certificate of Goodstanding "+
-                                "request is attached. Thank you for using our "+
-                                "services.",
-                      "html" => "<b>The result of the Certificate of Goodstanding "+
-                                "request is attached. Thank you for using our "+
+                      "text" => "The result of the Certificate of Good Standing "+
+                                "request is attached. This concludes our job "+
+                                "relating to the request id #{transaction.id}. Thank "+
+                                "you for using our services.",
+                      "html" => "<b>The result of the Certificate of Good Standing "+
+                                "request is attached. This concludes our job "+
+                                "relating to the request id #{transaction.id}. "+
+                                "Thank you for using our "+
                                 "services.</b>"
                   })
               else
@@ -65,13 +68,17 @@ module GMQ
                       "id"   => transaction.id,
                       "file_path" => file,
                       "file_rename" => "certificado_prgov.pdf",
-                      "text" => "Le incluimos el resultado de la Solicitud de "+
+                      "text" => "Le incluimos el resultado de la solicitud "+
+                                "número #{transaction.id} relacionada a un "+
                                 "Certificado de Antecedentes "+
-                                "Penales adjunto. Gracias por utilizar nuestros "+
+                                "Penales. Favor de ver el documento adjunto. "+
+                                "Gracias por utilizar nuestros "+
                                 "servicios.",
-                      "html" => "<b>Le incluimos el resultado de la Solicitud de "+
+                      "html" => "<b>Le incluimos el resultado de la solicitud "+
+                                "número #{transaction.id} relacionada a un "+
                                 "Certificado de Antecedentes "+
-                                "Penales adjunto. Gracias por utilizar nuestros "+
+                                "Penales. Favor de ver el documento adjunto. "+
+                                "Gracias por utilizar nuestros "+
                                 "servicios.</b>"
                   })
               end
