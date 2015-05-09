@@ -8,3 +8,4 @@ stdout
 .DS_Store
 .env
 /.bundle/
+/vendor/
