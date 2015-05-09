@@ -7,7 +7,7 @@
   "backtrace_errors"      : false,
   "display_results"       : true,
   "downtime"              : false,
-  "temp_dir"              : "./files/pdf",
+  "temp_dir"              : "./files/pdf/",
   "smtp" : {
                "host"     : "smtp.mandrillapp.com",
                "port"       : 25,
