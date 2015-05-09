@@ -539,7 +539,7 @@ module GMQ
           message = "Gracias por utilizar los servicios de PR.Gov. Está "+
                     "recibiendo este correo por que hemos recibido una "+
                     "solicitud de validación de información para un "+
-                    "certificado de Buena Conducta de la Policia de "+
+                    "certificado de Buena Conducta de la Policia "+
                     "de Puerto Rico para "+
                     "'#{full_name}'. Hemos comenzado el proceso de validación "+
                     "de la solicitud.\n\n"+

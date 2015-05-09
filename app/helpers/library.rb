@@ -29,7 +29,7 @@ module GMQ
 
 			# tells the stats to add a visit
 			def add_completed(db_connection=nil)
-				Stats.add_visit(db_connection)
+				Stats.add_completed(db_connection)
 			end
 
 			# get totals from stats
