@@ -44,22 +44,22 @@ module GMQ
               # Now. If the file is a PDF, then we proceed to delete
               # what the worker was asked to delete. Yeah, let's not trust
               # ourselves.
-              if(File.extname(params["file_path"]) == ".pdf")
+              if(File.extname(payload["file_path"]) == ".pdf")
                  # if the pdf exists, delete it
-                 if File.exists?(params["file_path"])
-                   logger.info "#{self} is deleting file #{params["file_path"]}."
-                    File.delete(params["file_path"])
+                 if File.exists?(payload["file_path"])
+                   logger.info "#{self} is deleting file #{payload["file_path"]}."
+                    File.delete(payload["file_path"])
                  else
                     logger.error "#{self} could not cleanup delete "+
-                                 "#{params["file_path"]}. Odd, the file "+
+                                 "#{payload["file_path"]}. Odd, the file "+
                                  "was not found but it was our responsability "+
                                  "to delete it."
                  end
                  # log it
-                 logger.info "#{self} - Cleanup Deleted #{params["file_path"]}."
+                 logger.info "#{self} - Cleanup Deleted #{payload["file_path"]}."
               else
                 logger.error "#{self} was unauthorized by worker logic to attempt "+
-                            "to delete #{params["file_path"]}."
+                            "to delete #{payload["file_path"]}."
               end
 
               # Try to update the transaction status,
