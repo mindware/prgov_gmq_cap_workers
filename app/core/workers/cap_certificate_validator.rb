@@ -20,7 +20,9 @@ module GMQ
 
       # Set a short backoff strategy of this
       # quick bursts, but short life for this worker retry attempts.
-      # should not exceed 6 minutes.
+      # should not exceed 6 minutes. Note: if this is ever modified
+      # the webapps validation controller's error_count limit must 
+      # match exactly the amount of retries we'd try here.
       @backoff_strategy = [3, 8, 12, 16, 20, 24, 28, 35, 40, 60, 80, 120,
                            150, 220, 260, 300, 315, 340, 350]
 
