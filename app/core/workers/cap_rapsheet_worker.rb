@@ -154,61 +154,125 @@ module GMQ
                 logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
               end
 
-              if transaction.language == "english"
-                subject = "We could not validate your information"
-                message = "We regret to inform you that the information "+
-                          "provided to us on #{transaction.created_at}, for "+
-                          "the request #{transaction.id}, did not match "+
-                          "the information stored in our government systems. "+
-                          "When requesting a Goodstanding Certificate "+
-                          "it's important to make sure that the information "+
-                          "you provide matches exactly the information "+
-                          "as it appears in the ID of the "+
-                          "identification method you've selected.\n\n"+
-                          "RCI Error: #{json["message"]}"
-                html =    "We regret to inform you that the information provided "+
-                          "to us on #{transaction.created_at}, for the "+
-                          "request #{transaction.id}, did not match "+
-                          "the information stored in our government systems. "+
-                          "When requesting a Goodstanding Certificate "+
-                          "it's important to make sure that the information "+
-                          "you provide matches exactly the information "+
-                          "as it appears in the identification of the "+
-                          "identification method you've selected.\n\n"+
-                          "<i>RCI Error: #{json["message"]}</i>"
+              # If this errored out because it requires an Analyst
+              if (json["code"].to_s == "3005")
+                  # Send messages relating to Fuzzy Result
+                  if transaction.language == "english"
+                    subject = "Your certificate request requires further analysis"
+                    message = "We would like to inform you that the information "+
+                              "provided to us regarding the request "+
+                              "#{transaction.id}, has been identified as requiring "+
+                              "further analysis by the Police Department and was "+
+                              "sent to an analyst for manual and careful revision. "+
+                              "No further actions are required on your part. "+
+                              "As soon as the Police Department analysts complete "+
+                              "their task, which could take several days, you will "+
+                              "receive another email from us.\n\n"+
+                              "RCI Error: #{json["message"]}"
+                    html =    "We would like to inform you that the information "+
+                              "provided to us regarding the request "+
+                              "#{transaction.id}, has been identified as requiring "+
+                              "further analysis by the Police Department and was "+
+                              "sent to an analyst for manual and careful revision. "+
+                              "No further actions are required on your part. "+
+                              "As soon as the Police Department analysts complete "+
+                              "their task, which could take several days, you will "+
+                              "receive another email from us.\n\n"+
+                              "<i>RCI Error: #{json["message"]}</i>"
+                  else
+                    # spanish
+                    subject = "Su solicitud de certificado requiere un analisis manual"
+                    message = "Le informamos que la información "+
+                              "tal como nos fue suministrada para la solicitud "+
+                              "con el número '#{transaction.id}', fue identificada "+
+                              "como que requiere una revisión manual por parte de "+
+                              "los analistas de la Policia de Puerto Rico.\n\n"+
+                              "Esto no require ninguna acción de su parte. "+
+                              "Tan pronto los analistas de la Policia completen "+
+                              "su labor de revisión, lo cual puee tardarse unos dias, "+
+                              "nos notificarán y usted recibirá un correo de "+
+                              "nuestra parte con el resultado del mismo.\n\n"+
+                              "RCI Error: #{json["message"]}"
+                    html =    "Le informamos que la información "+
+                              "tal como nos fue suministrada para la solicitud "+
+                              "con el número '#{transaction.id}', fue identificada "+
+                              "como que requiere una revisión manual por parte de "+
+                              "los analistas de la Policia de Puerto Rico.\n\n"+
+                              "Esto no require ninguna acción de su parte. "+
+                              "Tan pronto los analistas de la Policia completen "+
+                              "su labor de revisión, lo cual puee tardarse unos dias, "+
+                              "nos notificarán y usted recibirá un correo de "+
+                              "nuestra parte con el resultado del mismo.\n\n"+
+                              "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
+                  end
+                  logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                  Resque.enqueue(GMQ::Workers::EmailWorker, {
+                      "id"   => transaction.id,
+                      "subject" => subject,
+                      "text" => message,
+                      "html" => html,
+                  })
+
               else
-                # spanish
-                subject = "Error en la validación de su solicitud"
-                message = "Le informamos que la información "+
-                          "tal como nos fue suministrada en la fecha "+
-                          "#{transaction.created_at}, para la solicitud "+
-                          "con el número '#{transaction.id}', no pudo ser "+
-                          "identificada en los sistemas gubernamentales.\n\n"+
-                          "Al solicitar el Certificado de Antecedentes "+
-                          "Penales debe asegurarse solicitar con la "+
-                          "información tal cual "+
-                          "aparece en la identificación del método de "+
-                          "identificación seleccionado.\n\n"+
-                          "RCI Error: #{json["message"]}"
-                html =    "Le informamos que la información "+
-                          "tal como nos fue suministrada en la fecha "+
-                          "#{transaction.created_at}, para la solicitud "+
-                          "con el número '#{transaction.id}', no pudo ser "+
-                          "identificada en los sistemas gubernamentales.\n\n"+
-                          "Al solicitar el Certificado de Antecedentes "+
-                          "Penales debe asegurarse solicitar con la "+
-                          "información tal cual "+
-                          "aparece en la identificación del método de "+
-                          "identificación seleccionado.\n\n"+
-                          "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
+                # all other errors
+                if transaction.language == "english"
+                  subject = "We could not validate your information"
+                  message = "We regret to inform you that the information "+
+                            "provided to us on #{transaction.created_at}, for "+
+                            "the request #{transaction.id}, did not match "+
+                            "the information stored in our government systems. "+
+                            "When requesting a Goodstanding Certificate "+
+                            "it's important to make sure that the information "+
+                            "you provide matches exactly the information "+
+                            "as it appears in the ID of the "+
+                            "identification method you've selected.\n\n"+
+                            "RCI Error: #{json["message"]}"
+                  html =    "We regret to inform you that the information provided "+
+                            "to us on #{transaction.created_at}, for the "+
+                            "request #{transaction.id}, did not match "+
+                            "the information stored in our government systems. "+
+                            "When requesting a Goodstanding Certificate "+
+                            "it's important to make sure that the information "+
+                            "you provide matches exactly the information "+
+                            "as it appears in the identification of the "+
+                            "identification method you've selected.\n\n"+
+                            "<i>RCI Error: #{json["message"]}</i>"
+                else
+                  # spanish
+                  subject = "Error en la validación de su solicitud"
+                  message = "Le informamos que la información "+
+                            "tal como nos fue suministrada en la fecha "+
+                            "#{transaction.created_at}, para la solicitud "+
+                            "con el número '#{transaction.id}', no pudo ser "+
+                            "identificada en los sistemas gubernamentales.\n\n"+
+                            "Al solicitar el Certificado de Antecedentes "+
+                            "Penales debe asegurarse solicitar con la "+
+                            "información tal cual "+
+                            "aparece en la identificación del método de "+
+                            "identificación seleccionado.\n\n"+
+                            "RCI Error: #{json["message"]}"
+                  html =    "Le informamos que la información "+
+                            "tal como nos fue suministrada en la fecha "+
+                            "#{transaction.created_at}, para la solicitud "+
+                            "con el número '#{transaction.id}', no pudo ser "+
+                            "identificada en los sistemas gubernamentales.\n\n"+
+                            "Al solicitar el Certificado de Antecedentes "+
+                            "Penales debe asegurarse solicitar con la "+
+                            "información tal cual "+
+                            "aparece en la identificación del método de "+
+                            "identificación seleccionado.\n\n"+
+                            "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
+                end
+                logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                Resque.enqueue(GMQ::Workers::EmailWorker, {
+                    "id"   => transaction.id,
+                    "subject" => subject,
+                    "text" => message,
+                    "html" => html,
+                })
+
               end
-              logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
-              Resque.enqueue(GMQ::Workers::EmailWorker, {
-                  "id"   => transaction.id,
-                  "subject" => subject,
-                  "text" => message,
-                  "html" => html,
-              })
+
 
               # ENQUE WORKER to notify USER of faliled communication
               # with SIJC's RCI.
@@ -289,6 +353,10 @@ module GMQ
               # 400
               # 3003
               #
+              #
+              # Error 3004, 3003 and 3002 were deprecated by LoS RCI docs.
+              # New error 3005 encompasses all errors that requires an analyst
+              # intervention at PRPD.
               #
               # One or more of the antecedents found don't have a final disposition.
               # Further analysis is required.","status":400,"code":3004}
