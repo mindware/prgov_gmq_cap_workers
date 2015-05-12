@@ -182,14 +182,14 @@ module GMQ
                   else
                     # spanish
                     subject = "Su solicitud de certificado requiere un analisis manual"
-                    message = "Le informamos que la información "+
-                              "tal como nos fue suministrada para la solicitud "+
-                              "con el número '#{transaction.id}', fue identificada "+
-                              "como que requiere una revisión manual por parte de "+
+                    message = "Le informamos que los datos "+
+                              "tal cual nos han sido suministrados para la solicitud "+
+                              "con el número '#{transaction.id}', se identificaron "+
+                              "como que requieren una revisión manual por parte de "+
                               "los analistas de la Policia de Puerto Rico.\n\n"+
-                              "Esto no require ninguna acción de su parte. "+
+                              "Esto no necesita ninguna acción de su parte. "+
                               "Tan pronto los analistas de la Policia completen "+
-                              "su labor de revisión, lo cual puee tardarse unos dias, "+
+                              "su labor de revisión, lo cual puede tardarse unos dias, "+
                               "nos notificarán y usted recibirá un correo de "+
                               "nuestra parte con el resultado del mismo.\n\n"+
                               "RCI Error: #{json["message"]}"
@@ -198,13 +198,14 @@ module GMQ
                               "con el número '#{transaction.id}', fue identificada "+
                               "como que requiere una revisión manual por parte de "+
                               "los analistas de la Policia de Puerto Rico.\n\n"+
-                              "Esto no require ninguna acción de su parte. "+
+                              "Esto no necesita ninguna acción de su parte. "+
                               "Tan pronto los analistas de la Policia completen "+
-                              "su labor de revisión, lo cual puee tardarse unos dias, "+
+                              "su labor de revisión, lo cual puede tardarse unos dias, "+
                               "nos notificarán y usted recibirá un correo de "+
                               "nuestra parte con el resultado del mismo.\n\n"+
                               "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
                   end
+                  html = html.gsub("\n", "<br/>")
                   logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
                   Resque.enqueue(GMQ::Workers::EmailWorker, {
                       "id"   => transaction.id,
@@ -218,7 +219,7 @@ module GMQ
                 if transaction.language == "english"
                   subject = "We could not validate your information"
                   message = "We regret to inform you that the information "+
-                            "provided to us on #{transaction.created_at}, for "+
+                            "provided to us for "+
                             "the request #{transaction.id}, did not match "+
                             "the information stored in our government systems. "+
                             "When requesting a Goodstanding Certificate "+
@@ -227,42 +228,41 @@ module GMQ
                             "as it appears in the ID of the "+
                             "identification method you've selected.\n\n"+
                             "RCI Error: #{json["message"]}"
-                  html =    "We regret to inform you that the information provided "+
-                            "to us on #{transaction.created_at}, for the "+
-                            "request #{transaction.id}, did not match "+
+                  html =    "We regret to inform you that the information "+
+                            "provided to us for "+
+                            "the request #{transaction.id}, did not match "+
                             "the information stored in our government systems. "+
                             "When requesting a Goodstanding Certificate "+
                             "it's important to make sure that the information "+
                             "you provide matches exactly the information "+
-                            "as it appears in the identification of the "+
+                            "as it appears in the ID of the "+
                             "identification method you've selected.\n\n"+
                             "<i>RCI Error: #{json["message"]}</i>"
                 else
                   # spanish
                   subject = "Error en la validación de su solicitud"
-                  message = "Le informamos que la información "+
-                            "tal como nos fue suministrada en la fecha "+
-                            "#{transaction.created_at}, para la solicitud "+
-                            "con el número '#{transaction.id}', no pudo ser "+
-                            "identificada en los sistemas gubernamentales.\n\n"+
+                  message = "Le informamos que los datos "+
+                            "tal cual nos han sido suministrados para la solicitud "+
+                            "con el número '#{transaction.id}', no fueron "+
+                            "identificados en los sistemas gubernamentales.\n\n"+
                             "Al solicitar el Certificado de Antecedentes "+
                             "Penales debe asegurarse solicitar con la "+
                             "información tal cual "+
-                            "aparece en la identificación del método de "+
+                            "aparece en el ID del método de "+
                             "identificación seleccionado.\n\n"+
                             "RCI Error: #{json["message"]}"
-                  html =    "Le informamos que la información "+
-                            "tal como nos fue suministrada en la fecha "+
-                            "#{transaction.created_at}, para la solicitud "+
-                            "con el número '#{transaction.id}', no pudo ser "+
-                            "identificada en los sistemas gubernamentales.\n\n"+
+                  html =    "Le informamos que los datos "+
+                            "tal cual nos han sido suministrados para la solicitud "+
+                            "con el número '#{transaction.id}', no fueron "+
+                            "identificados en los sistemas gubernamentales.\n\n"+
                             "Al solicitar el Certificado de Antecedentes "+
                             "Penales debe asegurarse solicitar con la "+
                             "información tal cual "+
-                            "aparece en la identificación del método de "+
+                            "aparece en el ID del método de "+
                             "identificación seleccionado.\n\n"+
                             "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
                 end
+                html = html.gsub("\n", "<br/>")
                 logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
                 Resque.enqueue(GMQ::Workers::EmailWorker, {
                     "id"   => transaction.id,
