@@ -18,8 +18,11 @@ module GMQ
   module Workers
     class CAPValidationWorker  < GMQ::Workers::BaseWorker
 
-      # Set a short backoff strategy of this.
-      @backoff_strategy = [5, 10, 15, 20, 35]
+      # Set a short backoff strategy of this
+      # quick bursts, but short life for this worker retry attempts.
+      # should not exceed 6 minutes.
+      @backoff_strategy = [3, 8, 12, 16, 20, 24, 28, 35, 40, 60, 80, 120,
+                           150, 220, 260, 300, 315, 340, 350]
 
       def self.perform(*args)
         super # call base worker perform
@@ -232,12 +235,12 @@ module GMQ
             # 500 errors are internal server errors. They will be
             # retried. Here we allow RestClient to raise an Exception
             # which will be caught by the system and retried.
-            when 500
+          when 500, 502, 503
               # do proper notification of the problem:
-              logger.error "#{self} received 500 error when processing "+
+              logger.error "#{self} received #{response.code} error when processing "+
               "#{transaction.id} and connecting to URL: #{a.site}, METHOD: "+
               "#{a.method}, TYPE: #{a.type}."
-              puts "#{self} received 500 error when processing "+
+              puts "#{self} received #{response.code} error when processing "+
               "#{transaction.id} and connecting to URL: #{a.site}, METHOD: "+
               "#{a.method}, TYPE: #{a.type}."
 
