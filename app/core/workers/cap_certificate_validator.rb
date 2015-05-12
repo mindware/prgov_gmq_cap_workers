@@ -175,6 +175,7 @@ module GMQ
                                                 "#{json["code"]} - "+
                                                 "#{json["message"]}"
 
+                logger.error "SPECIAL ERROR IN 400, response error_count: #{transaction.error_count}"
                 # update the object values
                 transaction.location = "PR.gov GMQ"
                 transaction.result = response.to_str
@@ -182,6 +183,8 @@ module GMQ
                 transaction.state = :failed_validating_certificate_with_rci
                 transaction.error_count = (transaction.error_count.to_i) + 1
                 transaction.last_error_date = Time.now
+
+                logger.error "SPECIAL ERROR IN 400 AFTER, response error_count: #{transaction.error_count}"
                 # Detail the actual error from the API
                 if(json["code"].to_s == "2002")
                   # Transaction not found
@@ -246,10 +249,15 @@ module GMQ
               "#{transaction.id} and connecting to URL: #{a.site}, METHOD: "+
               "#{a.method}, TYPE: #{a.type}."
 
+              logger.error "SPECIAL ERROR IN 500 statement - response error_count: #{transaction.error_count}"
+
               # add error statistics to this transaction
               # later we could check wether the error is
               # a specific code or not.
               begin
+
+                logger.error "SPECIAL ERROR IN 500 statement - response error_count: #{transaction.error_count}"
+
                 # increase the counter. if nil, it defaults to 0.
                 transaction.error_count = (transaction.error_count.to_i) + 1
                 transaction.last_error_type = "#{e}"
@@ -262,6 +270,8 @@ module GMQ
                 puts "Error: #{e} ocurred"
                 logger "Error: #{e} ocurred while updating transaction"
               end
+
+              logger.error "SPECIAL ERROR IN 500 AFTER, response error_count: #{transaction.error_count}"
 
               response.return!(request, result, &block)
             # Any other http error codes are processed. Such as 301, 302
@@ -280,6 +290,8 @@ module GMQ
           "Error detail: #{e.inspect.to_s} MESSAGE: #{e.message}."
           # add error statistics to this transaction
           begin
+            logger.error "SPECIAL ERROR IN 500 statement - response error_count: #{transaction.error_count}"
+
             transaction.error_count = (transaction.error_count.to_i) + 1
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
@@ -291,6 +303,9 @@ module GMQ
             puts "Error: #{e} ocurred"
             logger "Error: #{e} ocurred while updating transaction"
           end
+
+            logger.error "SPECIAL ERROR AFTER restclient, response error_count: #{transaction.error_count}"
+
           raise GMQ::RCI::ApiError, "#{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
         # Timed out - Happens when a network error doesn't permit
@@ -306,12 +321,17 @@ module GMQ
           # add error statistics to this transaction but ignore
           # any errors when doing so
           begin
+            logger.error "SPECIAL ERROR IN 500 statement - response error_count: #{transaction.error_count}"
+
             transaction.error_count = (transaction.error_count.to_i) + 1
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
             transaction.status = "retrying"
             transaction.state = :failed_validating_certificate_with_rci
             transaction.save
+
+            logger.error "SPECIAL ERROR AFTER TIMEOUT, response error_count: #{transaction.error_count}"
+
           rescue Exception => e
             # ignore errors and continue
             puts "Error: #{e} ocurred"
@@ -334,12 +354,16 @@ module GMQ
           # this step, so we wrap this in a begin/rescue and ignore errors
           # from this attempt. If it works great, if not. Read the logs.
           begin
+            logger.error "SPECIAL ERROR IN 500 statement - response error_count: #{transaction.error_count}"
+
             transaction.error_count = (transaction.error_count.to_i) + 1
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
             transaction.status = "retrying"
             transaction.state = :failed_validating_certificate_with_rci
             transaction.save
+
+            logger.error "SPECIAL ERROR AFTER generic exception, response error_count: #{transaction.error_count}"
           rescue Exception => e
             puts "Error: #{e} ocurred"
             logger "Error: #{e} ocurred while updating transaction"
