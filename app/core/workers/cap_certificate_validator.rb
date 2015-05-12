@@ -21,7 +21,7 @@ module GMQ
       # Set a short backoff strategy of this
       # quick bursts, but short life for this worker retry attempts.
       # should not exceed 6 minutes. Note: if this is ever modified
-      # the webapps validation controller's error_count limit must 
+      # the webapps validation controller's error_count limit must
       # match exactly the amount of retries we'd try here.
       @backoff_strategy = [3, 8, 12, 16, 20, 24, 28, 35, 40, 60, 80, 120,
                            150, 220, 260, 300, 315, 340, 350]
@@ -260,6 +260,7 @@ module GMQ
                 transaction.save
               rescue Exception => e
                 puts "Error: #{e} ocurred"
+                logger "Error: #{e} ocurred while updating transaction"
               end
 
               response.return!(request, result, &block)
@@ -288,6 +289,7 @@ module GMQ
           rescue Exception => e
             # continue
             puts "Error: #{e} ocurred"
+            logger "Error: #{e} ocurred while updating transaction"
           end
           raise GMQ::RCI::ApiError, "#{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
@@ -313,6 +315,7 @@ module GMQ
           rescue Exception => e
             # ignore errors and continue
             puts "Error: #{e} ocurred"
+            logger "Error: #{e} ocurred while updating transaction"
           end
 
           raise GMQ::RCI::ConnectionTimedout, "#{self} #{e.inspect.to_s} - WORKER REQUEST: "+
@@ -339,6 +342,7 @@ module GMQ
             transaction.save
           rescue Exception => e
             puts "Error: #{e} ocurred"
+            logger "Error: #{e} ocurred while updating transaction"
           end
           # now raise the error
           raise e
