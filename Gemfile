@@ -13,7 +13,7 @@ gem "redis", "~> 3.2.1" # starting with version 2.2.0, redis-rb is thread-safe b
 gem 'aasm', "~> 3.2.1"
 
 # Workers: 
-gem 'resque' , "~> 1.25.2"
+gem 'resque', "~> 1.25.2"
 gem 'resque-scheduler', "~> 4.0.0" 
 gem 'resque-retry', "~> 1.4.0"
 
