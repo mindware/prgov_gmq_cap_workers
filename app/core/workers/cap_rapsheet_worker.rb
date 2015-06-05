@@ -135,24 +135,6 @@ module GMQ
                                               "#{json["code"]} - "+
                                               "#{json["message"]}"
 
-              # Try to update the transaction status,
-              # ignore it if it fails.
-              begin
-                # update the transaction
-                transaction.identity_validated = false
-                transaction.location = "Mail"
-                # TODO: update this status later so that if
-                # its a fuzzy result we mark as waiting
-                transaction.status = "completed"
-                transaction.state = :failed_validating_rapsheet_with_sijc
-                transaction.save
-                # update global statistics
-                transaction.remove_pending
-                transaction.add_completed
-              rescue Exception => e
-                puts "Error: #{e} ocurred"
-                logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
-              end
 
               # If this errored out because it requires an Analyst
               if (json["code"].to_s == "3005")
@@ -205,6 +187,23 @@ module GMQ
                               "nuestra parte con el resultado del mismo.\n\n"+
                               "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
                   end
+
+                  # Try to update the transaction status,
+                  # ignore it if it fails.
+                  begin
+                    # update the transaction
+                    transaction.identity_validated = false
+                    transaction.location = "RCI"
+                    # TODO: update this status later so that if
+                    # its a fuzzy result we mark as waiting
+                    transaction.status = "pending"
+                    transaction.state = :submitted_to_analyst_for_review
+                    transaction.save
+                  rescue Exception => e
+                    puts "Error: #{e} ocurred"
+                    logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
+                  end
+
                   html = html.gsub("\n", "<br/>")
                   logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
                   Resque.enqueue(GMQ::Workers::EmailWorker, {
@@ -262,6 +261,26 @@ module GMQ
                             "identificación seleccionado.\n\n"+
                             "<i>RCI Error: #{json["message"]}</i>".gsub("\n", "<br/>")
                 end
+
+                # Try to update the transaction status,
+                # ignore it if it fails.
+                begin
+                  # update the transaction
+                  transaction.identity_validated = false
+                  transaction.location = "Mail"
+                  # TODO: update this status later so that if
+                  # its a fuzzy result we mark as waiting
+                  transaction.status = "completed"
+                  transaction.state = :failed_validating_rapsheet_with_sijc
+                  transaction.save
+                  # update global statistics
+                  transaction.remove_pending
+                  transaction.add_completed
+                rescue Exception => e
+                  puts "Error: #{e} ocurred"
+                  logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
+                end
+
                 html = html.gsub("\n", "<br/>")
                 logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
                 Resque.enqueue(GMQ::Workers::EmailWorker, {
@@ -399,7 +418,7 @@ module GMQ
                 transaction.last_error_type = "#{e}"
                 transaction.last_error_date = Time.now
                 transaction.status = "retrying"
-                transaction.state = :failed_validating_rapsheet_with_sijc
+                transaction.state = :error_validating_rapsheet_with_sijc
                 transaction.save
               rescue Exception => e
                 puts "Error: #{e} ocurred"
@@ -427,7 +446,7 @@ module GMQ
             transaction.last_error_type = "#{e}"
             transaction.last_error_date = Time.now
             transaction.status = "retrying"
-            transaction.state = :failed_validating_rapsheet_with_sijc
+            transaction.state = :error_validating_rapsheet_with_sijc
             transaction.save
           rescue Exception => e
             # continue
