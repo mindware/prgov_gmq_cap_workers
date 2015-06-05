@@ -69,6 +69,7 @@ module GMQ
                 transaction.location = "Mail"
                 transaction.status = "finished"
                 transaction.state = :done_mailing_certificate
+                transaction.certificate_base64 = nil
                 transaction.save
                 # update global statistics
                 transaction.remove_pending

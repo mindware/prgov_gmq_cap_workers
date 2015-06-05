@@ -127,6 +127,53 @@ module GMQ
                 # continue
                 puts "Error: #{e} ocurred"
               end
+
+                  # Send messages relating to Fuzzy Result
+                  if transaction.language == "english"
+                    subject = "Your information has been verified successfully"
+                    message = "We would like to inform you that the information "+
+                              "provided to us regarding the request "+
+                              "#{transaction.id}, has been verified "+
+                              "successfully.\n\nPR.gov is now awaiting for the "+
+                              "Police Department's systems to expedite a "+
+                              "certificate, which we will send to you as "+
+                              "as soon as it is received.\n\n"
+                    html =    "We would like to inform you that the information "+
+                              "provided to us regarding the request "+
+                              "#{transaction.id}, has been verified "+
+                              "successfully.\n\nPR.gov is now awaiting for the "+
+                              "Police Department's systems to expedite a "+
+                              "certificate, which we will send to you as "+
+                              "as soon as it is received.\n\n"
+                  else
+                    # spanish
+                    subject = "Su información se ha revisado exitosamente"
+                    message = "Le informamos que la información relacionada "+
+                              "a la solicitud con el número "+
+                              "#{transaction.id}, ha sido verificada exitosamente.\n\n"+
+                              "PR.gov estará en espera que los sistemas de "+
+                              "la Policia de Puerto Rico expidan el certificado y "+
+                              "nos lo entreguen. Una vez ese proceso culmine, "+
+                              "le enviaremos a este correo "+
+                              "el documento solicitado.\n\n"
+                    html =    "Le informamos que la información relacionada "+
+                              "a la solicitud con el número "+
+                              "#{transaction.id}, ha sido verificada exitosamente.\n\n"+
+                              "PR.gov estará en espera que los sistemas de "+
+                              "la Policia de Puerto Rico expidan el certificado y "+
+                              "nos lo entreguen. Una vez ese proceso culmine, "+
+                              "le enviaremos a este correo "+
+                              "el documento solicitado.\n\n"
+                  end
+                  html = html.gsub("\n", "<br/>")
+                  logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                  Resque.enqueue(GMQ::Workers::EmailWorker, {
+                      "id"   => transaction.id,
+                      "subject" => subject,
+                      "text" => message,
+                      "html" => html,
+                  })
+
               # return the response
               response
             when 400
@@ -140,7 +187,7 @@ module GMQ
               if (json["code"].to_s == "3005")
                   # Send messages relating to Fuzzy Result
                   if transaction.language == "english"
-                    subject = "Your certificate request requires further analysis"
+                    subject = "Your certificate request has been sent to an analyst for review"
                     message = "We would like to inform you that the information "+
                               "provided to us regarding the request "+
                               "#{transaction.id}, has been identified as requiring "+
@@ -163,7 +210,7 @@ module GMQ
                               "<i>RCI Error: #{json["message"]}</i>"
                   else
                     # spanish
-                    subject = "Su solicitud de certificado requiere un analisis manual"
+                    subject = "Su solicitud de certificado ha sido enviado a un analista de la Policia para revisión"
                     message = "Le informamos que los datos "+
                               "tal cual nos han sido suministrados para la solicitud "+
                               "con el número '#{transaction.id}', se identificaron "+

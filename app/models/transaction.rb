@@ -84,7 +84,7 @@ module GMQ
       # again, don't try it as the system will quickly store everything in ram
       # and run out of it. If a transaction is touched (ie, updated in anyway)
       # its time to live (TTL) will reset.
-      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 6
+      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
       # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:
       # 604800 seconds in a week X 4 weeks = 1 month in seconds
@@ -92,7 +92,7 @@ module GMQ
       # can last before expiring.
       EXPIRATION = (604800 * 4) * MONTHS_TO_EXPIRATION_OF_TRANSACTION
 
-      LAST_TRANSACTIONS_TO_KEEP_IN_CACHE = 50
+      LAST_TRANSACTIONS_TO_KEEP_IN_CACHE = 5000
 
       ######################################################
       # A transaction generally consists of the following: #
@@ -100,6 +100,7 @@ module GMQ
 
       # If you add an attribute, update the initialize method and to_hash method
       attr_accessor :id,     # our transaction id
+                    :numeric_id,           # A numeric id
                     :email,                # user email
                     :ssn,                  # social security number
                     :passport,             # passport number
@@ -292,6 +293,7 @@ module GMQ
               self.email_error_date           = params["email_error_date"]
               self.last_error_type            = params["last_error_type"]
               self.last_error_date            = params["last_error_date"]
+              self.numeric_id                 = params["numeric_id"]
           end
           return self
       end
@@ -337,6 +339,7 @@ module GMQ
           @email_error_date = nil
           @last_error_type = nil
           @last_error_date = nil
+          @numeric_id = nil
       end
 
       def to_hash
@@ -483,10 +486,13 @@ module GMQ
 
       # Generates a full name based on aggregating transaction citizen name data
       def full_name
-          name = first_name # required
-          name << " #{middle_name}" if !middle_name.nil?
-          name << " #{last_name}" # required
-          name << " #{mother_last_name}" if !mother_last_name.nil?
+          name = first_name.strip # required
+          name << " #{middle_name.strip}" if !middle_name.nil?
+          name << " #{last_name.strip}" # required
+          name << " #{mother_last_name.strip}" if !mother_last_name.nil?
+
+          # capitalize each word and return the capitalized version
+          name.split.map(&:capitalize).join(' ')
       end
 
 
@@ -522,10 +528,12 @@ module GMQ
         # message = Config.all["messages"]["initial_confirmation"]
 
         if language == "english"
+          subject = "PR.Gov Good Standing Certificate Request"
           message = "Thank you for using PR.Gov's online services. You are "+
                     "receiving this email because we have received a "+
                     "request to validate submission information for a "+
-                    "Goodstanding Certificate for '#{full_name}'.\n\n"+
+                    "Good Standing Certificate for '#{full_name}'.\n\n"+
+                    "The transaction number is:\n'#{id}'.\n\n"+
                     "The information is being verified against multiple systems "+
                     "and data sources, including the Puerto Rico Police "+
                     "Department and the Criminal Justice Information Division.\n\n"+
@@ -536,32 +544,36 @@ module GMQ
                     "ignore and delete this and any related messages."
         else
           #spanish
+          subject = "Solicitud de Certificado de Antecedentes Penales de PR.Gov"
           message = "Gracias por utilizar los servicios de PR.Gov. Está "+
                     "recibiendo este correo por que hemos recibido una "+
                     "solicitud de validación de información para un "+
-                    "certificado de Buena Conducta de la Policia "+
+                    "certificado de Antecedente Penal de la Policía "+
                     "de Puerto Rico para "+
                     "'#{full_name}'. Hemos comenzado el proceso de validación "+
                     "de la solicitud.\n\n"+
-                    "El número de la transacción es:\n#{id}\n\n"+
+                    "El número de la transacción es:\n'#{id}'.\n\n"+
                     "En estos momentos la información de la solicitud "+
                     "está siendo validada con los sistemas de Policia de "+
                     "Puerto Rico, el Sistema Integrado de Justicia Criminal del "+
                     "Departamento de Justicia y otras agencias de ley y orden.\n\n"+
                     "Una vez completada la revisión estará "+
-                    "recibiendo otro comunicado de nuestra parte en este correo.\n\n"+
+                    "recibiendo otro comunicado de nuestra parte a esta dirección.\n\n"+
                     "Si entiende que esta solicitud fue en error, por favor "+
                     "ignore y elimine este, y cualquier correo relacionado al "+
                     "mismo."
         end
 
-        html_message = HTMLEntities.new.encode(message, :named)
+        html_message = "<html><body>"
+        html_message << HTMLEntities.new.encode(message, :named).gsub("\n", "<br>")
+        html_message << "</body></html>"
 
         { "class" => "GMQ::Workers::EmailWorker",
                      "args" => [{
                                  "id" => "#{id}",
                                  "queued_at" => "#{Time.now}",
 				                         "text" => message,
+                                 "subject" => subject,
                                  "html" => html_message,
                                  "request_rapsheet" => true,
                                 }]
@@ -612,8 +624,8 @@ module GMQ
         # Note: don't use single quotes for string values on JSON.
         { "class" => "GMQ::Workers::CAPValidationWorker",
                      "args" => [{
-                                 "request_id" => params["request_id"],
-                                 "id" => "#{params["id"]}",
+                                 "id" => params["id"],
+                                 "tx_id" => "#{params["tx_id"]}",
                                  "ssn" => "#{params["ssn"]}",
                                  "passport" => "#{params["passport"]}",
                                  "IP" => "#{params["IP"]}",
@@ -631,57 +643,6 @@ module GMQ
       # Remove an item from recent transactions list
       def self.remove_id_from_last_list(id)
         Store.db.lrem(db_list, 0, id)
-      end
-
-      # a method that creates fake transactions
-      # for a massive stress test. This method is available
-      # to the admin member group only and is available only
-      # to stress test the system. This was necessary in order
-      # to perform a GET request that results in the equivalent
-      # of a POST in the system. This becomes disabled in production
-      # automatically.
-      def self.stress_test_save
-        # this works only in test and development environments
-        if Config.environment == "test" or Config.environment == "development"
-            param = JSON.parse('{
-            "email":"acolon@ogp.pr.gov",
-            "ssn":"111223333",
-            "license_number":"123456789",
-            "first_name":"Andrés",
-            "middle_name":null,
-            "last_name":"Colón",
-            "mother_last_name":"Pérez",
-            "IP":"192.168.1.2",
-            "birth_date":"01/01/1982",
-            "residency":"San Juan",
-            "reason":"STRESS TEST",
-            "language":"spanish",
-            "location":"PR.gov GMQ",
-            "history":null,
-            "state":"started",
-            "status":"received",
-            "system_address":"127.0.0.1",
-            "created_at":"2014-08-15T19:50:45.868Z",
-            "updated_at":"2014-08-15T19:50:45.868Z",
-            "created_by":"***REMOVED***",
-            "certificate_base64":null,
-            "analyst_fullname":null,
-            "analyst_id":null,
-            "analyst_approval_datetime":null,
-            "analyst_transaction_id":null,
-            "analyst_internal_status_id":null,
-            "decision_code":null,
-            "identity_validated":null,
-            "emit_certificate_type":null,
-            "certificate_path":null}')
-            tx = Transaction.create(param)
-            tx.save
-            return tx
-        else
-          # this won't be available when we're
-          # not in debug mode.
-          raise ResourceNotFound
-        end
       end
 
       # Deletes this transaction
@@ -706,7 +667,12 @@ module GMQ
         if(@state == :new)
           @state = :started
           first_save = true
+          # if new, grab a numeric id and assign it to this object
+          if(@numeric_id == nil)
+             @numeric_id = Store.db.incr("#{Transaction.db_global_prefix}:numeric_id_count")
+          end
         end
+
         # Now lets convert the transaction object to a json. Note:
         # We have to retrieve this here, incase we ever need values here
         # from the Store. If we do it inside the multi or pipelined
@@ -728,6 +694,33 @@ module GMQ
                 "#{"Hint".green}: View the last item in the pending queue using: LINDEX #{queue_pending} 0"
         end
         return true
+    end
+
+
+    # This method returns a numeric id as expected by data.pr.gov
+    # unfotunately, data.pr.gov cannot handle our previous hashed and salted
+    # version of our transactions ids which we customized for them, thus
+    # we removed that code and resorted to creating a global counter of numeric
+    # ids. These ids are visible by the endpoint that shows stats, used by
+    # our data extractor (cap_script.py), which retrives our API data
+    # and stores it as a csv, which is later uploaded to data.pr.gov.
+    #
+    # This instance method checks if this object has a numeric_id.
+    # The numeric_id is retrieved from a global counter and is set the
+    # first time a transaction is saved. Since we have 32k legacy transactions
+    # that do not have an id, we created this method as the proper way to access
+    # and update those transactions when they show up no the stats list,
+    # and return a numeric id.
+    def get_numeric_id
+        # if no numeric_id found, grab one from the store
+        if(@numeric_id == nil)
+           @numeric_id = Store.db.incr("#{Transaction.db_global_prefix}:numeric_id_count")
+           # update the transaction in the store
+           save
+        end
+        # return the transaction numeric id
+        # return 'hi'
+        return @numeric_id
     end
 
     # This is the
@@ -803,11 +796,12 @@ module GMQ
       def certificate_ready(params)
           # validate these parameters. If this passes, we can safely import
           params = validate_certificate_ready_parameters(params)
+          # since we may turn off displaying results for production server
+          # in order to skip displaying base64 certificates in logs and
+          # console, here we display a notification to make sure we
+          # show what transaction we're processing
+          puts "Processing certificate for transaction #{params['id']}"
           self.certificate_base64          = params["certificate_base64"]
-          # to reduce memory usage, we no longer store the base64 cert, we
-          # merely mark it as received, and look it up in SIJC's RCI when
-          # we're ready to send it via email.
-          # self.certificate_base64            = true
           # Generate the Certificate job:
           Store.db.rpush(queue_pending, job_generate_negative_certificate_data)
       end
