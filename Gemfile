@@ -24,3 +24,5 @@ gem 'mail', '~> 2.6.3'
 
 # for safely decoding and encoding strings to HTML
 gem 'htmlentities', '~> 4.3.3'
+
+gem 'shotgun'

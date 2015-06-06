@@ -37,6 +37,8 @@ GEM
     rest_client (1.8.3)
       netrc (~> 0.7.7)
     rufus-scheduler (3.1.1)
+    shotgun (0.9.1)
+      rack (>= 1.0)
     sinatra (1.4.6)
       rack (~> 1.4)
       rack-protection (~> 1.4)
@@ -62,3 +64,7 @@ DEPENDENCIES
   resque-retry (~> 1.4.0)
   resque-scheduler (~> 4.0.0)
   rest_client (~> 1.8.3)
+  shotgun
+
+BUNDLED WITH
+   1.10.3
