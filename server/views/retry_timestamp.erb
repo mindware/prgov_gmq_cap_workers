@@ -1,0 +1,70 @@
+<% timestamp = params[:timestamp].to_i %>
+
+<h1>
+  Delayed Jobs scheduled for <%= format_time(Time.at(timestamp)) %>
+  (with Retry Information)
+</h1>
+
+<p class="intro">
+  This list below contains the delayed jobs scheduled for the current
+  timestamp, with retry information.
+</p>
+
+<p class="sub">
+  Showing <%= start = params[:start].to_i %> to <%= start + 20 %> of
+  <b><%= size = resque.delayed_timestamp_size(timestamp) %></b> jobs
+</p>
+
+<table class="jobs">
+  <tr>
+    <th>Class</th>
+    <th>Args</th>
+    <th>Retry Attempts</th>
+    <th>Exception</th>
+    <th>Backtrace</th>
+    <th>Actions</th>
+  </tr>
+  <% jobs = resque.delayed_timestamp_peek(timestamp, start, 20) %>
+  <% jobs.each do |job| %>
+    <% retry_key = retry_key_for_job(job) %>
+    <% retry_attempts = retry_attempts_for_job(job) %>
+    <tr>
+      <td class="class"><%= h job['class'] %></td>
+      <td class="args"><%= h job['args'].inspect %></td>
+      <% if retry_attempts.nil? %>
+        <td colspan="3"><i>n/a - normal delayed job</i></td>
+      <% else %>
+        <td><%= retry_attempts %></td>
+        <% failure = retry_failure_details(retry_key) %>
+        <% if failure.nil? %>
+          <td colspan="2"><i>n/a - not using resque-retry failure backend</i></td>
+        <% else %>
+          <td><code><%= failure['exception'] %></code></td>
+          <td class="error">
+            <% if failure['backtrace'] %>
+              <a href="#" class="backtrace"><%= h(failure['error']) %></a>
+              <pre style="display:none"><%= h failure['backtrace'].join("\n") %></pre>
+            <% else %>
+              <%= h failure['error'] %>
+            <% end %>
+          </td>
+        <% end %>
+      <% end %>
+      <td>
+        <form action="<%= u "retry/#{timestamp}/jobs/#{CGI.escape(Resque.encode(job))}/remove" %>" method="post">
+          <input type="hidden" name="timestamp" value="<%= timestamp.to_i %>">
+          <input type="submit" value="Remove">
+        </form>
+      </td>
+    </tr>
+  <% end %>
+  <% if jobs.empty? %>
+    <tr>
+      <td class="no-data" colspan="6">
+        There are no pending jobs scheduled for this time.
+      </td>
+    </tr>
+  <% end %>
+</table>
+
+<%= partial :next_more, :start => start, :size => size %>
