@@ -33,8 +33,8 @@ Dir["app/core/workers/*.rb"].each {|file| require file }
 
 puts "\n\nStarting Script\n\n"
 
-values = GMQ::Workers::Store.db.get("gmq:cap:tx:PRCAP1155568347147470178")
-#puts values
+#values = GMQ::Workers::Store.db.get("gmq:cap:tx:PRCAP1155568347147470178")
+# puts values
 
 keys = [] 
 GMQ::Workers::Store.db.scan_each(:match => "gmq:cap:tx:PRCAP*") {|key| 
@@ -43,7 +43,7 @@ GMQ::Workers::Store.db.scan_each(:match => "gmq:cap:tx:PRCAP*") {|key|
 	keys << key
 }
 
-puts "Found a total of #{keys.length} transactions in the storage."
+#puts "Found a total of #{keys.length} transactions in the storage."
 
 certificate = 0
 error = 0
@@ -87,7 +87,8 @@ keys.each do |key|
 end
 
 puts "Hay un total de #{keys.length} transacciones en el sistema."  
-puts "Un total de #{error + certificate} se completaron exitosamente."
+puts "Un total de #{error + certificate} se completaron exitosamente. "
+puts "Un total de #{keys.length - (error + certificate)} no terminado exitosamente."
 puts "Se han emitido #{certificate} certificatados positivos y negativos "+
      "de esas #{keys.length} transacciones."  
 puts "Hemos encontrado #{error} transacciones con errores de las "+
@@ -104,7 +105,7 @@ if(unknown_types.keys.length > 0)
 	print "Encontramos #{unknown} transacciones de #{keys.length} con "+
 	"las siguientes caracteristicas: " 
 	unknown_types.each do |key, value|
-		print "#{value} of #{key}"		
+		print "#{value} con estatus #{key} "		
 	end	
 	puts "."
 end
