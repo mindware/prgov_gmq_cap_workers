@@ -14,31 +14,6 @@ module GMQ
         payload = args[0]
 
 
-        # This flag determines if email notifications should be
-        # supressed regarding generic notifications not related to
-        # sending the actual certificate.
-        #
-        # This is used specifically when it is necessary to
-        # invoke a request a second time manually, where a user has
-        # already been notified in the past, and thus is uncessary to
-        # mail them twice regarding this second attempt. While this
-        # object is generally "indempotent", such that when it simply errors
-        # out and is retried, the user is not notified on multiple occassions,
-        # When running a process that has already completed succesfully
-        # would in fact result in notifications upon success, we aim to
-        # avoid this by incorporating this mute option.
-        mute = false
-        # Check if this worker should be invoked in mute mode,
-        # where email notifcations are supressed. This is used in cases
-        # where
-        if (payload.has_key? "mute")
-          if(payload["mute"].to_s == "true")
-            logger.info "#{self} is activated in mute mode for "+
-                        "#{transaction.id}, notifications will be supressed."
-            mute = true
-          end
-        end
-
         # get the ID from the params. If it is missing, we error out.
         # This error is not be a candidate for a retry thanks to BaseWorker.
         if !payload.has_key? "id"
@@ -50,6 +25,7 @@ module GMQ
                "providing a proper id for this job. This job will not retry."
           raise MissingTransactionId
         end
+
 
         # Let's fetch the transaction from the Data Store.
         # The following line returns GMQ::Workers::TransactionNotFound
@@ -82,6 +58,34 @@ module GMQ
                "fetching transaction #{payload["id"]}."
           # re-raise so that it's caught by resque
           raise e
+        end
+
+
+
+
+        # This flag determines if email notifications should be
+        # supressed regarding generic notifications not related to
+        # sending the actual certificate.
+        #
+        # This is used specifically when it is necessary to
+        # invoke a request a second time manually, where a user has
+        # already been notified in the past, and thus is uncessary to
+        # mail them twice regarding this second attempt. While this
+        # object is generally "indempotent", such that when it simply errors
+        # out and is retried, the user is not notified on multiple occassions,
+        # When running a process that has already completed succesfully
+        # would in fact result in notifications upon success, we aim to
+        # avoid this by incorporating this mute option.
+        mute = false
+        # Check if this worker should be invoked in mute mode,
+        # where email notifcations are supressed. This is used in cases
+        # where
+        if (payload.has_key? "mute")
+          if(payload["mute"].to_s == "true")
+            logger.info "#{self} is activated in mute mode for "+
+                        "#{transaction.id}, notifications will be supressed."
+            mute = true
+          end
         end
 
         # update the transaction status and save it
