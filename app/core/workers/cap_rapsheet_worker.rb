@@ -13,6 +13,32 @@ module GMQ
         super # call base worker perform
         payload = args[0]
 
+
+        # This flag determines if email notifications should be
+        # supressed regarding generic notifications not related to
+        # sending the actual certificate.
+        #
+        # This is used specifically when it is necessary to
+        # invoke a request a second time manually, where a user has
+        # already been notified in the past, and thus is uncessary to
+        # mail them twice regarding this second attempt. While this
+        # object is generally "indempotent", such that when it simply errors
+        # out and is retried, the user is not notified on multiple occassions,
+        # When running a process that has already completed succesfully
+        # would in fact result in notifications upon success, we aim to
+        # avoid this by incorporating this mute option.
+        mute = false
+        # Check if this worker should be invoked in mute mode,
+        # where email notifcations are supressed. This is used in cases
+        # where
+        if (payload.has_key? "mute")
+          if(payload["mute"].to_s == "true")
+            logger.info "#{self} is activated in mute mode for "+
+                        "#{transaction.id}, notifications will be supressed."
+            mute = true
+          end
+        end
+
         # get the ID from the params. If it is missing, we error out.
         # This error is not be a candidate for a retry thanks to BaseWorker.
         if !payload.has_key? "id"
@@ -39,6 +65,14 @@ module GMQ
                " job will not be retried."
           # re-raise so that it's caught by resque and the job isn't retried.
           raise e
+        # When worker termination is requested via the SIGTERM signal,
+        # Resque throws a Resque::TermException exception. Handling
+        # this exception allows the worker to cease work on the currently
+        # running job and gracefully save state by re-enqueueing the job so
+        # it can be handled by another worker.
+        # Every begin/rescue needs this rescue added
+        rescue Resque::TermException
+          Resque.enqueue(self, args)
         # log any other exceptions, but let resque retry according to our
         # BaseWorker specifications.
         rescue Exception => e
@@ -119,9 +153,11 @@ module GMQ
               begin
                 transaction.identity_validated = true
                 transaction.location = "SIJC RCI"
-                transaction.status = "processing"
+                transaction.status = "waiting"
                 transaction.state = :waiting_for_sijc_to_generate_cert
                 transaction.save
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
                 # done - return reponse and wait for our sijc callback
               rescue Exception => e
                 # continue
@@ -166,13 +202,17 @@ module GMQ
                               "el documento solicitado.\n\n"
                   end
                   html = html.gsub("\n", "<br/>")
-                  logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
-                  Resque.enqueue(GMQ::Workers::EmailWorker, {
-                      "id"   => transaction.id,
-                      "subject" => subject,
-                      "text" => message,
-                      "html" => html,
-                  })
+                  if(!mute)
+                    logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                    Resque.enqueue(GMQ::Workers::EmailWorker, {
+                        "id"   => transaction.id,
+                        "subject" => subject,
+                        "text" => message,
+                        "html" => html,
+                    })
+                  else
+                    logger.info "#{self} is supressing EmailWorker for #{transaction.id}"
+                  end
 
               # return the response
               response
@@ -195,7 +235,7 @@ module GMQ
                               "sent to an analyst for manual and careful revision. "+
                               "No further actions are required on your part. "+
                               "As soon as the Police Department analysts complete "+
-                              "their task, which could take several days, you will "+
+                              "their task, which could take several days or weeks, you will "+
                               "receive another email from us.\n\n"+
                               "RCI Error: #{json["message"]}"
                     html =    "We would like to inform you that the information "+
@@ -218,7 +258,7 @@ module GMQ
                               "los analistas de la Policia de Puerto Rico.\n\n"+
                               "Esto no necesita ninguna acción de su parte. "+
                               "Tan pronto los analistas de la Policia completen "+
-                              "su labor de revisión, lo cual puede tardarse unos dias, "+
+                              "su labor de revisión, lo cual puede tomar varios dias o semanas, "+
                               "nos notificarán y usted recibirá un correo de "+
                               "nuestra parte con el resultado del mismo.\n\n"+
                               "RCI Error: #{json["message"]}"
@@ -246,20 +286,25 @@ module GMQ
                     transaction.status = "pending"
                     transaction.state = :submitted_to_analyst_for_review
                     transaction.save
+                  rescue Resque::TermException
+                    Resque.enqueue(self, args)
                   rescue Exception => e
                     puts "Error: #{e} ocurred"
                     logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
                   end
 
                   html = html.gsub("\n", "<br/>")
-                  logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
-                  Resque.enqueue(GMQ::Workers::EmailWorker, {
-                      "id"   => transaction.id,
-                      "subject" => subject,
-                      "text" => message,
-                      "html" => html,
-                  })
-
+                  if(!mute)
+                    logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                    Resque.enqueue(GMQ::Workers::EmailWorker, {
+                        "id"   => transaction.id,
+                        "subject" => subject,
+                        "text" => message,
+                        "html" => html,
+                    })
+                  else
+                    logger.info "#{self} is supressing EmailWorker for #{transaction.id}"
+                  end
               else
                 # all other errors
                 if transaction.language == "english"
@@ -323,20 +368,25 @@ module GMQ
                   # update global statistics
                   transaction.remove_pending
                   transaction.add_completed
+                rescue Resque::TermException
+                  Resque.enqueue(self, args)
                 rescue Exception => e
                   puts "Error: #{e} ocurred"
                   logger.error "#{self} encountered an #{e} error while updating transaction. Ignoring."
                 end
 
                 html = html.gsub("\n", "<br/>")
-                logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
-                Resque.enqueue(GMQ::Workers::EmailWorker, {
-                    "id"   => transaction.id,
-                    "subject" => subject,
-                    "text" => message,
-                    "html" => html,
-                })
-
+                if(!mute)
+                  logger.info "#{self} is enqueing an EmailWorker for #{transaction.id}"
+                  Resque.enqueue(GMQ::Workers::EmailWorker, {
+                      "id"   => transaction.id,
+                      "subject" => subject,
+                      "text" => message,
+                      "html" => html,
+                  })
+                else
+                  logger.info "#{self} is supressing EmailWorker for #{transaction.id}"
+                end
               end
 
 
@@ -467,6 +517,8 @@ module GMQ
                 transaction.status = "retrying"
                 transaction.state = :error_validating_rapsheet_with_sijc
                 transaction.save
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
               rescue Exception => e
                 puts "Error: #{e} ocurred"
               end
@@ -495,6 +547,8 @@ module GMQ
             transaction.status = "retrying"
             transaction.state = :error_validating_rapsheet_with_sijc
             transaction.save
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             # continue
             puts "Error: #{e} ocurred"
@@ -521,6 +575,9 @@ module GMQ
             transaction.status = "retrying"
             transaction.state = :failed_validating_rapsheet_with_sijc
             transaction.save
+          # When worker termination is requested via the SIGTERM signal
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             # ignore errors and continue
             puts "Error: #{e} ocurred"
@@ -528,7 +585,10 @@ module GMQ
 
           raise GMQ::RCI::ConnectionTimedout, "#{self} #{e.inspect.to_s} - WORKER REQUEST: "+
           "URL: #{a.site}, METHOD: #{a.method}, TYPE: #{a.type}"
-        # All other errors.
+        # Catch SIGTERM and Renenque
+        rescue Resque::TermException
+          Resque.enqueue(self, args)
+        # Everything else
         rescue Exception => e
           # we will catch and rethrow the error.
           logger.error "#{e} while processing #{transaction.id}. "+
@@ -549,12 +609,23 @@ module GMQ
             transaction.status = "waiting"
             transaction.state = :failed_validating_rapsheet_with_sijc
             transaction.save
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             puts "Error: #{e} ocurred"
           end
           # now raise the error
           raise e
         end # end of begin/rescue
+
+        # When worker termination is requested via the SIGTERM signal,
+        # Resque throws a Resque::TermException exception. Handling
+        # this exception allows the worker to cease work on the currently
+        # running job and gracefully save state by re-enqueueing the job so
+        # it can be handled by another worker.
+        # Every begin/rescue needs this rescue added
+        rescue Resque::TermException
+          Resque.enqueue(self, args)
       end # end of perform
     end # end of class
   end # end of worker module

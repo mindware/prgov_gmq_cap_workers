@@ -130,6 +130,10 @@ module GMQ
                 else
                   raise GMQ::RCI::ApiError, "did not receive expected values from RCI API"
                 end
+              # When worker termination is requested via the SIGTERM signal
+              # make sure to re-enqueue this job
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
               rescue Exception => e
                 parse_error = true
                 logger.error "#{self} encountered an error '#{e}'. "+
@@ -158,6 +162,9 @@ module GMQ
                     transaction.save
                     # done - return reponse and wait for our sijc callback
                 end
+              # When worker termination is requested via the SIGTERM signal
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
               # Catch any potential database errors in this attempt
               rescue Exception => e
                 logger.error "#{self} encountered error "+
@@ -201,6 +208,9 @@ module GMQ
                 # update global statistics.
                 # transaction.remove_pending
                 # transaction.add_completed
+              # When worker termination is requested via the SIGTERM signal
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
               rescue Exception => e
                 puts "Error: #{e} ocurred"
                 logger.error "#{self} encountered an #{e} error before updating validation request in the datastore."
@@ -266,6 +276,9 @@ module GMQ
                 transaction.location = "PR.gov GMQ"
                 transaction.state = :failed_validating_certificate_with_rci
                 transaction.save
+              # When worker termination is requested via the SIGTERM signal
+              rescue Resque::TermException
+                Resque.enqueue(self, args)
               rescue Exception => e
                 puts "Error: #{e} ocurred"
                 logger "Error: #{e} ocurred while updating transaction"
@@ -298,6 +311,9 @@ module GMQ
             transaction.status = "retrying"
             transaction.state = :failed_validating_certificate_with_rci
             transaction.save
+          # When worker termination is requested via the SIGTERM signal
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             # continue
             puts "Error: #{e} ocurred"
@@ -331,7 +347,9 @@ module GMQ
             transaction.save
 
             logger.error "SPECIAL ERROR AFTER TIMEOUT, response error_count: #{transaction.error_count}"
-
+          # When worker termination is requested via the SIGTERM signal
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             # ignore errors and continue
             puts "Error: #{e} ocurred"
@@ -364,6 +382,9 @@ module GMQ
             transaction.save
 
             logger.error "SPECIAL ERROR AFTER generic exception, response error_count: #{transaction.error_count}"
+          # When worker termination is requested via the SIGTERM signal
+          rescue Resque::TermException
+            Resque.enqueue(self, args)
           rescue Exception => e
             puts "Error: #{e} ocurred"
             logger "Error: #{e} ocurred while updating transaction"
@@ -371,6 +392,9 @@ module GMQ
           # now raise the error
           raise e
         end # end of begin/rescue
+      # When worker termination is requested via the SIGTERM signal
+      rescue Resque::TermException
+        Resque.enqueue(self, args)
       end # end of perform
     end # end of class
   end # end of worker module

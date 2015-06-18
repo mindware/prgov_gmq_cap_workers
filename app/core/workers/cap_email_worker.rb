@@ -65,7 +65,9 @@ module GMQ
         else
           raise PRGov::IncorrectEmailParameters, "Invalid or missing arguments for email worker."
         end
-
+      # When worker termination is requested via the SIGTERM signal                
+      rescue Resque::TermException
+        Resque.enqueue(self, args)
       end # end of perform
     end # end of class
   end # end of worker module
