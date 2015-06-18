@@ -7,6 +7,9 @@
 
 # add the global config helper
 require 'app/helpers/config'
+
+require 'resque/errors'
+
 # add resque-retry modules
 require 'resque-retry'
 # perform any variable rewrite as necessary by using the definitions file
@@ -15,6 +18,7 @@ require 'app/core/definitions/definitions'
 require "app/helpers/library"
 # add the errors definitions
 require 'app/helpers/errors'
+
 
 # include all files in the helpers library, they're depencies of the transaction
 # model that is used.
@@ -106,6 +110,14 @@ module GMQ
         # redefine this for each worker, but call super as the
         # first line, in order to perform base checks such as maintenance
         # defined in this worker.
+
+        # When worker termination is requested via the SIGTERM signal,
+        # Resque throws a Resque::TermException exception. Handling
+        # this exception allows the worker to cease work on the currently
+        # running job and gracefully save state by re-enqueueing the job so
+        # it can be handled by another worker.
+        rescue Resque::TermException
+          Resque.enqueue(self, args)
       end
 
       # TODO: this method would help workers know if they're in maintenance
