@@ -589,14 +589,15 @@ module GMQ
       # GMQ.
       # In other words, this next method is unused and let here for
       # academic reasons.
-      def job_rapsheet_validation_data
+      def job_rapsheet_validation_data(mute = false)
         # Here we create a hash of what the Resque system will expect in
         # the redis queue under resque:queue:prgov_cap.
         # Note: don't use single quotes for string values on JSON.
         { "class" => "GMQ::Workers::RapsheetWorker",
                      "args" => [{
                                  "id" => "#{id}",
-                                 "queued_at" => "#{Time.now}"
+                                 "queued_at" => "#{Time.now}",
+                                 "mute" => "#{mute}"
                                 }]
         }.to_json
       end
@@ -694,101 +695,128 @@ module GMQ
                 "#{"Hint".green}: View the last item in the pending queue using: LINDEX #{queue_pending} 0"
         end
         return true
-    end
+      end
 
 
-    # This method returns a numeric id as expected by data.pr.gov
-    # unfotunately, data.pr.gov cannot handle our previous hashed and salted
-    # version of our transactions ids which we customized for them, thus
-    # we removed that code and resorted to creating a global counter of numeric
-    # ids. These ids are visible by the endpoint that shows stats, used by
-    # our data extractor (cap_script.py), which retrives our API data
-    # and stores it as a csv, which is later uploaded to data.pr.gov.
-    #
-    # This instance method checks if this object has a numeric_id.
-    # The numeric_id is retrieved from a global counter and is set the
-    # first time a transaction is saved. Since we have 32k legacy transactions
-    # that do not have an id, we created this method as the proper way to access
-    # and update those transactions when they show up no the stats list,
-    # and return a numeric id.
-    def get_numeric_id
-        # if no numeric_id found, grab one from the store
-        if(@numeric_id == nil)
-           @numeric_id = Store.db.incr("#{Transaction.db_global_prefix}:numeric_id_count")
-           # update the transaction in the store
-           save
-        end
-        # return the transaction numeric id
-        # return 'hi'
-        return @numeric_id
-    end
+      # This method returns a numeric id as expected by data.pr.gov
+      # unfotunately, data.pr.gov cannot handle our previous hashed and salted
+      # version of our transactions ids which we customized for them, thus
+      # we removed that code and resorted to creating a global counter of numeric
+      # ids. These ids are visible by the endpoint that shows stats, used by
+      # our data extractor (cap_script.py), which retrives our API data
+      # and stores it as a csv, which is later uploaded to data.pr.gov.
+      #
+      # This instance method checks if this object has a numeric_id.
+      # The numeric_id is retrieved from a global counter and is set the
+      # first time a transaction is saved. Since we have 32k legacy transactions
+      # that do not have an id, we created this method as the proper way to access
+      # and update those transactions when they show up no the stats list,
+      # and return a numeric id.
+      def get_numeric_id
+          # if no numeric_id found, grab one from the store
+          if(@numeric_id == nil)
+             @numeric_id = Store.db.incr("#{Transaction.db_global_prefix}:numeric_id_count")
+             # update the transaction in the store
+             save
+          end
+          # return the transaction numeric id
+          return @numeric_id
+      end
 
-    # This is the
-    # Additional info:
-    # This method is private & not meant to be called directly only through save.
-    # This method saves using a redis pipeline, which means that all commands
-    # in the pipeline block are actually called in a single request
-    # on the database. It is very important that within the
-    # pipeline block, any interaction with the database, be it an instance
-    # method or class method, uses the db_connection already opened for the
-    # pipeline. Store.db must not be called directly or indirectly from within
-    # that pipeline, or else a new connection from the Connection Pool would
-    # be used, which would lead to instability in the system. By recycling the
-    # same db connection, we make the system perform with excellent performance.
-    #
-    def pipelined_save(json, first_save=false)
-        if Config.display_hints
-          debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
-          debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
-          debug "Store Pipeline: Attempting to save into \"#{queue_pending}\" queue"
-        end
-
-        # This is where we do an atomic save on the database. We grab a
-        # connection from the pool, and use it. If a connection is unavailable
-        # the code (Fiber) will be on hold, and will magically resume properly
-        # thanks to our use of EM-Synchrony.
-        Store.db.pipelined do |db_connection|
-          # don't worry about an error here, if the db isn't available
-          # it'll raise an exception that will be caught by the system
-
-          # Update the transaction object in the database by storing the JSON
-          # in the key under this ID in the database store.
-          db_connection.set(db_id, json)
-
-          # If TTL is not nil, update the Time to Live everytime a transaction
-          # is saved/updated
-          if(EXPIRATION > 0)
-            db_connection.expire(db_id, EXPIRATION)
+      # This is the
+      # Additional info:
+      # This method is private & not meant to be called directly only through save.
+      # This method saves using a redis pipeline, which means that all commands
+      # in the pipeline block are actually called in a single request
+      # on the database. It is very important that within the
+      # pipeline block, any interaction with the database, be it an instance
+      # method or class method, uses the db_connection already opened for the
+      # pipeline. Store.db must not be called directly or indirectly from within
+      # that pipeline, or else a new connection from the Connection Pool would
+      # be used, which would lead to instability in the system. By recycling the
+      # same db connection, we make the system perform with excellent performance.
+      #
+      def pipelined_save(json, first_save=false)
+          if Config.display_hints
+            debug "Store Pipeline: Attempting to save transaction in Store under key \"#{db_id}\""
+            debug "Store Pipeline: Attempting to save into recent transactions list \"#{db_list}\""
+            debug "Store Pipeline: Attempting to save into \"#{queue_pending}\" queue"
           end
 
-          # if this is the first time this transaction is saved:
-          if first_save
-            # Add it to a list of the last couple of items
-            db_connection.lpush(db_list, db_cache_info)
-            # trim the items to the maximum allowed, determined by this constant:
-            db_connection.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
+          # This is where we do an atomic save on the database. We grab a
+          # connection from the pool, and use it. If a connection is unavailable
+          # the code (Fiber) will be on hold, and will magically resume properly
+          # thanks to our use of EM-Synchrony.
+          Store.db.pipelined do |db_connection|
+            # don't worry about an error here, if the db isn't available
+            # it'll raise an exception that will be caught by the system
 
-            # Add it to our GMQ pending queue, to be grabbed by our workers
-            # Enqueue a email notification job
-            db_connection.rpush(queue_pending, job_notification_data)
-            # Enqueue a rapsheet validation job
-            # db_connection.rpush(queue_pending, job_rapsheet_validation_data)
+            # Update the transaction object in the database by storing the JSON
+            # in the key under this ID in the database store.
+            db_connection.set(db_id, json)
 
-            # We can't use any method that uses Store.db here
-            # because that would cause us to checkout a db connection from the
-            # pool for each of those commands; the pipelined commands need to
-            # run on the same connection as the commands in the pipeline,
-            # so we will not use the Store.add_pending method. For any
-            # of our own method that requires access to the db, we will
-            # recycle the current db_connection. In this case, the add_pending
-            # LibraryHelper method supports receiving an existing db connection
-            # which makes it safe for the underlying classes to perform
-            # database requests, appending them to this pipeline block.
-            add_pending(db_connection)
-          end # end of first_save for new transactions
+            # If TTL is not nil, update the Time to Live everytime a transaction
+            # is saved/updated
+            if(EXPIRATION > 0)
+              db_connection.expire(db_id, EXPIRATION)
+            end
+
+            # if this is the first time this transaction is saved:
+            if first_save
+              # Add it to a list of the last couple of items
+              db_connection.lpush(db_list, db_cache_info)
+              # trim the items to the maximum allowed, determined by this constant:
+              db_connection.ltrim(db_list, 0, LAST_TRANSACTIONS_TO_KEEP_IN_CACHE)
+
+              # Add it to our GMQ pending queue, to be grabbed by our workers
+              # Enqueue a email notification job
+              db_connection.rpush(queue_pending, job_notification_data)
+              # Enqueue a rapsheet validation job
+              # db_connection.rpush(queue_pending, job_rapsheet_validation_data)
+
+              # We can't use any method that uses Store.db here
+              # because that would cause us to checkout a db connection from the
+              # pool for each of those commands; the pipelined commands need to
+              # run on the same connection as the commands in the pipeline,
+              # so we will not use the Store.add_pending method. For any
+              # of our own method that requires access to the db, we will
+              # recycle the current db_connection. In this case, the add_pending
+              # LibraryHelper method supports receiving an existing db connection
+              # which makes it safe for the underlying classes to perform
+              # database requests, appending them to this pipeline block.
+              add_pending(db_connection)
+            end # end of first_save for new transactions
+          end
+          debug "Saved!".bold.green
+      end
+
+
+      # Requeue a transaction. If this is ever used in a pipelined request
+      # the db_connection must be provided. If used as a simple method,
+      # it'll pick a connection from the pool to the db
+      def requeue_rapsheet_job(db_connection = nil)
+        # if we're not being used inside a pipelined request, grab an
+        # existing connection from the db pool
+        if(db_connection.nil?)
+          # call the rapsheet validation job with 'mute' paramter as true
+          # to supress notifications when re-queing
+          Store.db.rpush(queue_pending, job_rapsheet_validation_data(true))
+        else
+          # when a connection is provided, such as for a pipelined request
+          # use it:
+          # call the rapsheet validation job with 'mute' paramter as true to
+          # supress notifications when re-queing
+          db_connection.rpush(queue_pending, job_rapsheet_validation_data(true))
         end
-        debug "Saved!".bold.green
-    end
+
+        # update the status
+        @status = "requeued"
+        @location = "PR.gov GMQ"
+        @state = :validating_rapsheet_with_sijc
+        # save the transaction state
+        save
+        return true
+      end
 
       # Called when the transaction's certificate has been generated.
       # in the case of this API it means SIJC's RCI has generated the
