@@ -10,3 +10,4 @@ stdout
 .env
 /.bundle/
 /vendor/
+*.backup
