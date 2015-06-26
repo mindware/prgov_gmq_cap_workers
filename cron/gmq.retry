@@ -1,0 +1,8 @@
+# Do gentle retries of any stuck jobs, 
+# by gentle, we mean the script does them in batches of 10 every 15 seconds.
+0 */3 * * * curl http://localhost:5678/gmq-slow-retry > /dev/null 2>&1 &
+0 */3 * * * date > <ENTER YOUR PATH HERE>/cron/last_global_retry_run
+# Fetch all certificates that are pending in RCI 
+# that we haven't received yet from rci (stuck in rci) 
+20 */1 * * * ruby <ENTER YOUR PATH HERE>/systems/prgov/retry_not_received.rb > /dev/null 2>&1 &
+20 */1 * * * date > <ENTER YOUR PATH HERE>/cron/last_fetch_pending_certificates

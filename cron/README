@@ -1,0 +1,8 @@
+Automatically request the GMQ page for forcing all jobs to be completed that
+have failed to be retried, and process RCI jobs that could be stuck in CJIS.
+
+Use crontab to configure them, ie:
+crontab -u <username> <crontab file> 
+
+Example:
+crontab -u myuser gmq.retry
