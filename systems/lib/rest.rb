@@ -16,6 +16,8 @@ puts "PWD: #{Dir.pwd}"
 puts "PWD: #{File.dirname(__FILE__)}" 
 puts "RCI: #{ENV['SIJC_RCI_USER']}" 
 puts "IP: #{ENV['SIJC_IP']}" 
+puts "GMQ: #{ENV['API_USER']}" 
+puts "IP: #{ENV['CAP_API_PRIVATE_IP']}" 
 # include all helpers - since the scripts are ran under us, we take their path
 # into consideration, and so an additiona ../
 require "app/helpers/library" 

@@ -24,6 +24,10 @@ module GMQ
           erb local_template('retryAll.erb')
         end
 
+        get '/gmq-slow-retry' do
+          erb local_template('retryAllSlowly.erb')
+        end
+
         post '/gmq/:timestamp/remove' do
           Resque.delayed_timestamp_peek(params[:timestamp], 0, 0).each do |job|
             cancel_retry(job)
@@ -86,6 +90,7 @@ module GMQ
 end
 
 Resque::Server.tabs << 'GMQ'
+Resque::Server.tabs << 'GMQ-Slow-Retry'
 Resque::Server.class_eval do
   include GMQ::Server
   helpers GMQ::Server::Helpers

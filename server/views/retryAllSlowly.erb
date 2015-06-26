@@ -1,0 +1,47 @@
+<h1>GMQ Slow Jobs Pending Retry</h1>
+
+<p class="intro">
+	Processing all pending jobs, slowly. 
+</p>
+
+<p class="sub">
+  <% size = resque.delayed_queue_schedule_size %>
+  <% if (params[:max].to_i == 0)
+        # if non specified or invalid int/string, use maximum size
+        max = size
+     else
+        max = params[:max].to_i
+     end
+  %>
+  Showing <%= start = params[:start].to_i %> to <%= start + max %> of
+  <b><%= size %></b> timestamps
+</p>
+
+<!-- GMQ Manual execution -->
+<h1>Processing stuck jobs patiently...</h1>
+<% timestamps = resque.delayed_queue_peek(start, size) %>
+<% # Process x stuck jobs every 15 seconds. We do x as not to
+   # overwhelm the system, as it needs to also process other
+   # work. When x is 10, we do 2400 every hour. 15 is 3600
+   # Unless we have priority queues with workers assigned
+   # to validation at all times, we should stick to 10 if 
+   # we want to do a slow retry.
+%> 
+<% countMax = 10 %>
+<% count = countMax %>
+<% sleepTime = 15 %>
+<% timestamps.each do |timestamp| %>
+  <% job = resque.delayed_timestamp_peek(timestamp, 0, 1).first %>
+  <% next unless job %>
+  Queing...
+  <% Resque::Scheduler.enqueue_delayed_items_for_timestamp(timestamp) %>
+  <% # sleep x seconds every 5 jobs %>
+  <% if count <= 0 %>
+    <% sleep sleepTime %>
+    <% count = countMax %>
+  <% else %>
+    <% count -= 1 %>
+  <% end %>
+  <%= h job['class'] %> <%= format_time(Time.at(timestamp)) %> . <font color='green'>Done</font>. <Br/>
+<% end %>
+<%= partial :next_more, :start => start, :size => size %>
