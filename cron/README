@@ -1,5 +1,6 @@
-Automatically request the GMQ page for forcing all jobs to be completed that
-have failed to be retried, and process RCI jobs that could be stuck in CJIS.
+Automatically request the GMQ page for forcing all jobs to be completed.
+Process any misbehaving transactions that haven't been retried automatically
+in production.
 
 Use crontab to configure them, ie:
 crontab -u <username> <crontab file> 
