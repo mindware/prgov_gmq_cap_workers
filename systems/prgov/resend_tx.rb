@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 # First, fix the paths so that everything under this directory
 # is in the ruby path. This way we don't have to include relative filepaths
 $: << File.expand_path(File.dirname(__FILE__) +"/")
@@ -7,6 +6,7 @@ puts "URL: #{File.expand_path(File.dirname(__FILE__) +"/")}"
 
 Dir.chdir File.expand_path(File.dirname(__FILE__) +"/")
 
+require 'time'
 require '../lib/rest'
 require 'resque'
 require 'resque-scheduler'
@@ -42,9 +42,6 @@ Dir["app/core/workers/*.rb"].each {|file| require file }
 
 puts "\n\nStarting Script\n\n"
 
-values = GMQ::Workers::Store.db.get("gmq:cap:tx:PRCAP1155568347147470178")
-#puts values
-
 keys = [] 
 GMQ::Workers::Store.db.scan_each(:match => "gmq:cap:tx:PRCAP*") {|key| 
 	# append the key but strip the specific redis namespace
@@ -65,21 +62,30 @@ keys.each do |key|
 		puts "Error #{e} while processing #{key}. Cannot continue."
 		exit
 	end
-	if(tx.state.to_s == "waiting_for_sijc_to_generate_cert")
+
+	time = Time.parse(tx.created_at.to_s)
+
+	# if this request happened in july 
+	if(time.month < 6 and time.year == 2015) 
+		next # skip requests that 
+	else
+		if(time.month == 6 and time.day <= 28)
+		end 
+	end
+
+	if(tx.email.to_s.include? "yahoo.com" or tx.email.to_s.include? "aol.com" or 
+	   tx.email.to_s.include? "escopr.com" or tx.email.to_s.include? "")
 		waiting += 1
+		# sleep one second before re-queing to do this 
+		# in a gentler way. We have about 30 workers per server, so 
+		# processing 5 jobs every 5 seconds is fine. 
+		sleep 1
 		# puts "#{tx.id} - waiting for SIJC since #{tx.updated_at}" 
 		sorted << { :id => tx.id, :updated_at => tx.updated_at } 
+		# result = tx.requeue_rapsheet_job
+		puts "Needs Requeuing #{tx.id} - from #{tx.updated_at} - #{result} (#{tx.email}}" 
 	end
 end
 
-keys = nil 
-
-
-sorted.sort_by! {|tx| tx[:updated_at] }
-
-sorted.each do |key|
-	puts "#{key[:id]} - waiting for SIJC since #{key[:updated_at]}" 
-end
-
-puts "Found #{waiting} waiting out of #{sorted.length}"  
+puts "Found #{waiting} out of #{keys.length}."  
 puts "Done."

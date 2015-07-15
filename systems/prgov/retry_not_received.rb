@@ -1,3 +1,11 @@
+# First, fix the paths so that everything under this directory
+# is in the ruby path. This way we don't have to include relative filepaths
+$: << File.expand_path(File.dirname(__FILE__) +"/")
+
+puts "URL: #{File.expand_path(File.dirname(__FILE__) +"/")}"
+
+Dir.chdir File.expand_path(File.dirname(__FILE__) +"/")
+
 require '../lib/rest'
 require 'resque'
 require 'resque-scheduler'
@@ -65,7 +73,7 @@ keys.each do |key|
 		# puts "#{tx.id} - waiting for SIJC since #{tx.updated_at}" 
 		sorted << { :id => tx.id, :updated_at => tx.updated_at } 
 		result = tx.requeue_rapsheet_job
-		puts "Requeuing #{tx.id} - #{result}" 
+		puts "Requeuing #{tx.id} - from #{tx.updated_at} - #{result}" 
 	end
 end
 

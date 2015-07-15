@@ -2,7 +2,10 @@
 # is in the ruby path. This way we don't have to include relative filepaths
 $: << File.expand_path(File.dirname(__FILE__) +"/../../")
 
-Dir.chdir "../../"
+puts "Path is now: #{File.expand_path(File.dirname(__FILE__) +"/../../")}"
+
+# Dir.chdir "../../"
+Dir.chdir File.expand_path(File.dirname(__FILE__) +"/../../")
 
 # Require bundler
 require 'bundler/setup'
