@@ -27,6 +27,10 @@ module GMQ
 				Stats.remove_pending(db_connection)
 			end
 
+	                 def remove_completed(db_connection=nil)
+                                Stats.remove_completed(db_connection)
+                        end
+
 			# tells the stats to add a visit
 			def add_completed(db_connection=nil)
 				Stats.add_completed(db_connection)
