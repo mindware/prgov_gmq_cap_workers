@@ -580,15 +580,6 @@ module GMQ
         }.to_json
       end
 
-      # We no longer enqueue this simultaneously as the notification
-      # email, as the inter-government system was processing faster
-      # than the simple email that sent a message. So many times the
-      # certificate would arrive before the first notification.
-      # To undo this, we simply forced the validation to be called
-      # not from the API but from the first notification worker in the
-      # GMQ.
-      # In other words, this next method is unused and let here for
-      # academic reasons.
       def job_rapsheet_validation_data(mute = false)
         # Here we create a hash of what the Resque system will expect in
         # the redis queue under resque:queue:prgov_cap.
@@ -598,6 +589,29 @@ module GMQ
                                  "id" => "#{id}",
                                  "queued_at" => "#{Time.now}",
                                  "mute" => "#{mute}"
+                                }]
+        }.to_json
+      end
+
+      # Retrieve a certificate that has already been generated
+      # in the recent past in RCI. 
+      # If the transaction exists we will receive a base64 output. 
+      # Optional: 
+      # If we provide a callback_url as true, this will not only fetch the certificate
+      # but force RCI to perform a callback to the GMQ of certificate_ready callback url specified
+      # in the RetrieveWorker of the GMQ, 
+      # which basically will execute the final step of a transaction
+      # request, forcing the process to ocurr, including receiving the cert at the GMQ
+      # API, creating the PDF, and sending it to the user via email.
+      def job_certificate_retrieve_data(callback_url=false)
+        # Here we create a hash of what the Resque system will expect in
+        # the redis queue under resque:queue:prgov_cap.
+        # Note: don't use single quotes for string values on JSON.
+        { "class" => "GMQ::Workers::RapsheetRetrieveWorker",
+                     "args" => [{
+                                 "id" => "#{id}",
+                                 "queued_at" => "#{Time.now}",
+				 "callback_url" => callback_url
                                 }]
         }.to_json
       end
@@ -813,6 +827,36 @@ module GMQ
         @status = "requeued"
         @location = "PR.gov GMQ"
         @state = :validating_rapsheet_with_sijc
+        # save the transaction state
+        save
+        return true
+      end
+
+      # Instance method to retrieve this certificate if it been generated in RCI
+      # in the past. If we provide a callback as true, the system will request a 
+      # callback be initiated to the GMQ to deliver the certificate. 
+      # If you just want the base64, you simply set the callback as false. 
+      # If you need the final process to be executed, including mailing the user
+      # the certificate, then you must invoke the callback as true.
+      def queue_retrieve_certificate_job(db_connection = nil, callback=false)
+        # if we're not being used inside a pipelined request, grab an
+        # existing connection from the db pool
+        if(db_connection.nil?)
+          # call the rapsheet validation job with 'mute' paramter as true
+          # to supress notifications when re-queing
+          Store.db.rpush(queue_pending, job_certificate_retrieve_data(true))
+        else
+          # when a connection is provided, such as for a pipelined request
+          # use it:
+          # call the rapsheet validation job with 'mute' paramter as true to
+          # supress notifications when re-queing
+          db_connection.rpush(queue_pending, job_certificate_retrieve_data(true))
+        end
+
+        # update the status
+        @status = "requeued"
+        @location = "PR.gov GMQ"
+        @state = :retrieving_certificate_from_rci
         # save the transaction state
         save
         return true
