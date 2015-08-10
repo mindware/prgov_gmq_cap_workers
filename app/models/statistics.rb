@@ -46,6 +46,14 @@ module GMQ
         db_connection.decr("#{db_id}:#{pending_prefix}")
       end
 
+      # decrement a pending, this happens when
+      # when we complete a task or it fails.
+      def self.remove_completed(db_connection=nil)
+        db_connection = Store.db if db_connection.nil?
+        db_connection.decr("#{db_id}:#{completed_prefix}")
+      end
+
+
       ########################################
       #                 Gets                 #
       ########################################
