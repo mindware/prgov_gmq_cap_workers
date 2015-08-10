@@ -47,8 +47,6 @@ puts "Found a total of #{keys.length} transactions in the storage."
 
 waiting = 0
 
-sorted = [] 
-
 keys.each do |key|
 	begin
 		tx = GMQ::Workers::Transaction.find key 
@@ -56,14 +54,13 @@ keys.each do |key|
 		puts "Error #{e} while processing #{key}. Cannot continue."
 		exit
 	end
-	if(tx.state.to_s == "submitted_to_analyst_for_review")
 		waiting += 1
-		# puts "#{tx.id} - waiting for SIJC since #{tx.updated_at}" 
-		sorted << { :id => tx.id, :updated_at => tx.updated_at } 
-		result = tx.requeue_rapsheet_job
-		puts "Requeuing #{tx.id} - #{result}" 
-	end
+		before = tx.ttl
+		tx.save
+		now = tx.ttl
+		puts "Updated #{tx.id}, from #{before} to #{now}" 
+		#sleep 1
 end
 
-puts "Found #{waiting} waiting for analyst out of #{keys.length}, and re-enqueued all of them."  
+puts "Updated #{waiting} out of #{keys.length}."  
 puts "Done."
