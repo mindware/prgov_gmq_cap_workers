@@ -65,6 +65,3 @@ DEPENDENCIES
   resque-scheduler (~> 4.0.0)
   rest_client (~> 1.8.3)
   shotgun
-
-BUNDLED WITH
-   1.10.3

@@ -25,7 +25,13 @@ module GMQ
         transaction = Transaction.find(payload["id"])
 
         # puts "transaction: #{transaction.id} #{transaction.certificate_base64.nil?}"
+<<<<<<< HEAD
         if(transaction.certificate_base64.to_s.length > 0)
+=======
+        if(transaction.certificate_base64.class.to_s == 'String' and
+           transaction.certificate_base64.to_s.length > 0 )
+           logger.info "Base64 Detected for #{transaction.id}."
+>>>>>>> c0d9adada80eedae50b2209df7d39129278da0b7
            cert = Certificate.new
            cert.load_data(transaction.certificate_base64)
            file = "#{Config.all["system"]["temp_dir"]}#{transaction.id}.pdf"
