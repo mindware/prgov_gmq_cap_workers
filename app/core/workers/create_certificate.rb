@@ -23,11 +23,13 @@ module GMQ
         # if the given Transaction id is not found in the system.
         # BaseWorker will not retry a job for a transaction that is not found.
         transaction = Transaction.find(payload["id"])
+        logger.info "#{self}: #{payload["id"]} certificate_base64 has a length "+
+        "of #{transaction.certificate_base64.to_s.length}."
 
         # puts "transaction: #{transaction.id} #{transaction.certificate_base64.nil?}"
         if(transaction.certificate_base64.class.to_s == 'String' and
            transaction.certificate_base64.to_s.length > 0 )
-           logger.info "Base64 Detected for #{transaction.id}."
+	   logger.info "Valid String Detected for base64 on #{transaction.id}."
            cert = Certificate.new
            cert.load_data(transaction.certificate_base64)
            file = "#{Config.all["system"]["temp_dir"]}#{transaction.id}.pdf"
