@@ -12,7 +12,8 @@ module GMQ
       def self.perform(*args)
         super # call base worker perform
         payload = args[0]
-
+	
+	console.log("#{self} - payload is #{payload.class} - #{payload}") 
 
         # get the ID from the params. If it is missing, we error out.
         # This error is not be a candidate for a retry thanks to BaseWorker.

@@ -84,7 +84,7 @@ module GMQ
       # again, don't try it as the system will quickly store everything in ram
       # and run out of it. If a transaction is touched (ie, updated in anyway)
       # its time to live (TTL) will reset.
-      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
+      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 12
       # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:
       # 604800 seconds in a week X 4 weeks = 1 month in seconds

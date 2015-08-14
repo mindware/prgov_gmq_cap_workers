@@ -1,12 +1,3 @@
-# First, fix the paths so that everything under this directory
-# is in the ruby path. This way we don't have to include relative filepaths
-$: << File.expand_path(File.dirname(__FILE__) +"/")
-
-puts "URL: #{File.expand_path(File.dirname(__FILE__) +"/")}"
-
-Dir.chdir File.expand_path(File.dirname(__FILE__) +"/")
-
-require 'time'
 require '../lib/rest'
 require 'resque'
 require 'resque-scheduler'
@@ -56,8 +47,6 @@ puts "Found a total of #{keys.length} transactions in the storage."
 
 waiting = 0
 
-sorted = [] 
-
 keys.each do |key|
 	begin
 		tx = GMQ::Workers::Transaction.find key 
@@ -65,29 +54,14 @@ keys.each do |key|
 		puts "Error #{e} while processing #{key}. Cannot continue."
 		exit
 	end
-	if(tx.state.to_s == "waiting_for_sijc_to_generate_cert")
-		today = Time.now
-		tx_date = Time.parse tx.updated_at.to_s 
-	
-		# if this is a transaction from today less than one hour ago 
-		if(today.month == tx_date.month and today.day == tx_date.day and today.year == tx_date.year and today.hour == tx_date.hour)
-			# skip it
-			puts "Skipping #{tx.id} as it was last updated today. "+
-			     "less than an hour ago."
-			next 
-		end
-
+	if(tx.state.to_s == "retrieving_certificate_from_rci")
 		waiting += 1
-		# sleep one second before re-queing to do this 
-		# in a gentler way. We have about 30 workers per server, so 
-		# processing 5 jobs every 5 seconds is fine. 
-		sleep 1
 		# puts "#{tx.id} - waiting for SIJC since #{tx.updated_at}" 
-		sorted << { :id => tx.id, :updated_at => tx.updated_at } 
-		result = tx.requeue_rapsheet_job
-		puts "Requeuing #{tx.id} - from #{tx.updated_at} - #{result}" 
+		result =tx.queue_retrieve_certificate_job(nil, true) # force a callback
+		puts "Retrieving #{tx.id} - #{result}" 
+		sleep 1
 	end
 end
 
-puts "Found #{waiting} waiting out of #{keys.length}, and re-enqueued all of them."  
+puts "Found #{waiting} waiting for analyst out of #{keys.length}, and retrieved all of them."  
 puts "Done."

@@ -87,6 +87,8 @@ keys.each do |key|
 end
 
 puts "Hay un total de #{keys.length} transacciones en el sistema."  
+puts "El nuevo servicio ha representando un ahorro de $#{certificate * (7)} para la Policia" 
+puts "Le hemos ahorrado $#{1.50 * certificate}, solamente en sellos colectivos, a la ciudadania." 
 puts "Un total de #{error + certificate} se completaron exitosamente. "
 puts "Un total de #{keys.length - (error + certificate)} no terminado exitosamente."
 puts "Se han emitido #{certificate} certificatados positivos y negativos "+
