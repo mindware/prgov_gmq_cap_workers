@@ -108,6 +108,12 @@ module GMQ
         query << "&ssn=#{transaction.ssn}" if transaction.ssn.to_s.length > 0
         query << "&passport=#{transaction.passport}" if transaction.passport.to_s.length > 0
         query << "&license=#{transaction.license_number}"
+	query << "&requester_ip=#{transaction.IP}"
+	query << "&requester_email=#{transaction.email}"
+	query << "&residency_country=#{transaction.residency}"
+	query << "&language=#{transaction.language}"
+	query << "&reason=#{transaction.reason}"
+	query << "&created_at=#{transaction.created_at}"
         # Due to what we could only describe as an unfortunate accident or
         # evil incarnate joke on SIJC's part, RCI API requires the date
         # in miliseconds since epoch, so we parse
