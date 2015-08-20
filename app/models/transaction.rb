@@ -84,7 +84,18 @@ module GMQ
       # again, don't try it as the system will quickly store everything in ram
       # and run out of it. If a transaction is touched (ie, updated in anyway)
       # its time to live (TTL) will reset.
-      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 12
+      #
+      # As discussed in several meetings with the PRPD and DOJ, the source of
+      # truth for all transaction requests is RCI. It was agreed that 
+      # PR.gov at minimum will hold transactions in memory for one month. 
+      # Beyond that it is optional for PR.gov to keep data in hot storage
+      # Any data that must be fetched must be retrieved in cold backups
+      # if they exceed this date. For this reason, PR.gov sends meta-data
+      # to RCI about transactions, and stores information for the following
+      # months in hot-storage (cold-storage being subject to OGP retention 
+      # policies):
+      MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
+
       # The expiration is going to be Z months, in seconds.
       # Time To Live - Math:
       # 604800 seconds in a week X 4 weeks = 1 month in seconds
