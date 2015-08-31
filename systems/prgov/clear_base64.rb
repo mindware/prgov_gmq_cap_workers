@@ -59,9 +59,12 @@ keys.each do |key|
 	end
 	if(tx.state.to_s == "done_mailing_certificate")
 		cleared += 1
-		tx.certificate_base64 = nil
-		tx.save
-		puts "Processing #{tx.id} from #{tx.updated_at}"
+		value = tx.certificate_base64.to_s.length
+		if(value > 0)
+			tx.certificate_base64 = nil
+			tx.save
+			puts "Processing #{tx.id} from #{tx.updated_at}"
+		end
 	end
 end
 
