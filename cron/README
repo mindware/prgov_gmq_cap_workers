@@ -1,6 +1,9 @@
+Prior to having a working resque-retry, cronjobs can be used to
+work around retrying jobs. The following is an example of crons
+of how one might get jobs retried for a hypothetical user. 
+
 Automatically request the GMQ page for forcing all jobs to be completed.
-Process any misbehaving transactions that haven't been retried automatically
-in production.
+Process any misbehaving transactions that haven't been retried automatically.
 
 Use crontab to configure them, ie:
 crontab -u <username> <crontab file> 
