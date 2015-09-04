@@ -11,3 +11,4 @@ stdout
 /.bundle/
 /vendor/
 *.backup
+/cron/*
