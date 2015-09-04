@@ -2,8 +2,8 @@ require '../lib/rest'
 
 require 'base64'
 
-user = "***REMOVED***"
-pass = "***REMOVED***"
+user = "user"
+pass = "password"
 id = '1e29234ee0c84921adec08fbe5980162'
 url = "http://localhost:9000/v1/cap/transaction/review_complete"
 

@@ -138,24 +138,6 @@ class GMQ
     request("/transaction", 'post', payload)
   end
 
-  def self.test
-      payload = {
-      		:first_name => "Andrés",
-      		:last_name  => "Colón",
-      		:mother_last_name => "Pérez",
-      		:ssn	=> "123561234",
-      		:license_number => "123456789",
-      		:birth_date => "***REMOVED***2",
-      		:residency  => "San Juan",
-      		:IP   	    => "192.168.1.1",
-      		:reason	    => "good enough",
-      		:birth_place=> "San Juan",
-      		:email	    => "andres@thoughtware.tv",
-      		:language   => "spanish"
-  	 }
-     self.enqueue_cap_transaction(payload)
-  end
-
   private
   def self.basic_authentication
     "#{ENV["GMQ_CAP_USER"]}:#{ENV["GMQ_CAP_PASSWORD"]}"

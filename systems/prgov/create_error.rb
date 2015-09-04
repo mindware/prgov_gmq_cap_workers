@@ -1,6 +1,6 @@
 require '../lib/rest'
-user = "***REMOVED***"
-pass = "***REMOVED***"
+user = "user"
+pass = "password"
 # credentials via basic auth
 url = "http://localhost:9000/v1/cap/transaction/"
 first_name = 'Andrés' 

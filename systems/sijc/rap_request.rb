@@ -4,7 +4,7 @@ require '../lib/rest'
 tx_id = '0338ca35444694f18a'
 user = ENV['SIJC_RCI_USER']
 pass = ENV['SIJC_RCI_PASSWORD']
-#ip = '***REMOVED***'
+#ip = '172.16.1.185'
 ip = ENV['SIJC_IP']
 #port = ''
 port = "#{ENV['SIJC_PORT']}"

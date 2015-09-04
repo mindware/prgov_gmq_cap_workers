@@ -1,3 +1,4 @@
+# Fake passwords used during testing to validate authentication resources
 echo "Trying valid user on unallowed resource."
 curl -u policia:password -X GET 'http://localhost:9000/v1/cap/transaction/1'
 echo ""

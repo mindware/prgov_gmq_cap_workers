@@ -1,8 +1,8 @@
 require '../lib/rest'
 require 'base64'
 
-user = "***REMOVED***"
-pass = "***REMOVED***"
+user = "user"
+pass = "password"
 
 url = "http://localhost:9000/v1/cap/transaction/certificate_ready"
 method = "put"

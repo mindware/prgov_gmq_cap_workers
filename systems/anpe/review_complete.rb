@@ -2,8 +2,8 @@ require '../lib/rest'
 
 require 'base64'
 
-user = "***REMOVED***"
-pass = "***REMOVED***"
+user = "user"
+pass = "password"
 # Get the id from the console as argument, otherwise us a default
 # id that may or may not exist.
 if ARGV[0].to_s != "" 

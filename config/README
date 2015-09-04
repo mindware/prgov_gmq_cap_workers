@@ -17,7 +17,7 @@ psswords and passkeys for new users a tool has been provided for you, in the 'sc
 folder. The only way to add new users or change passwords, is by generating them using the
 supplied tool (thor gmq:generate:password or thor gmq:generate:user username group1, group2).
 
-What follows is an example of a properly formatted 'users.json' file:
+What follows is an example of what could be a properly formatted 'users.json' file:
 {
   "rci"         : { "passkey" : "9b9b2a8ddf62329a6031d8d2724275c5e1daa72c01dbd2026a83615f",
                     "groups" : ["sijc"] },
@@ -25,7 +25,7 @@ What follows is an example of a properly formatted 'users.json' file:
                     "groups" : ["prgov"] },
   "cap_worker"	: { "passkey" : "299a18a088f2e1e08074863cc03f6b699307eb895fdcd5c2c404e294",
                     "groups" : ["worker"] },
-  "***REMOVED***"   : { "passkey" : "759528379170710b70d0e17e62cd142931db535d07bcb8cb4bffe6d9",
+  "cap_admin"   : { "passkey" : "759528379170710b70d0e17e62cd142931db535d07bcb8cb4bffe6d9",
 		    "groups" : ["admin"] }
 }
 
