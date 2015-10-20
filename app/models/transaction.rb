@@ -86,13 +86,13 @@ module GMQ
       # its time to live (TTL) will reset.
       #
       # As discussed in several meetings with the PRPD and DOJ, the source of
-      # truth for all transaction requests is RCI. It was agreed that 
-      # PR.gov at minimum will hold transactions in memory for one month. 
+      # truth for all transaction requests is RCI. It was agreed that
+      # PR.gov at minimum will hold transactions in memory for one month.
       # Beyond that it is optional for PR.gov to keep data in hot storage
       # Any data that must be fetched must be retrieved in cold backups
       # if they exceed this date. For this reason, PR.gov sends meta-data
       # to RCI about transactions, and stores information for the following
-      # months in hot-storage (cold-storage being subject to OGP retention 
+      # months in hot-storage (cold-storage being subject to OGP retention
       # policies):
       MONTHS_TO_EXPIRATION_OF_TRANSACTION = 3
 
@@ -605,12 +605,12 @@ module GMQ
       end
 
       # Retrieve a certificate that has already been generated
-      # in the recent past in RCI. 
-      # If the transaction exists we will receive a base64 output. 
-      # Optional: 
+      # in the recent past in RCI.
+      # If the transaction exists we will receive a base64 output.
+      # Optional:
       # If we provide a callback_url as true, this will not only fetch the certificate
       # but force RCI to perform a callback to the GMQ of certificate_ready callback url specified
-      # in the RetrieveWorker of the GMQ, 
+      # in the RetrieveWorker of the GMQ,
       # which basically will execute the final step of a transaction
       # request, forcing the process to ocurr, including receiving the cert at the GMQ
       # API, creating the PDF, and sending it to the user via email.
@@ -844,9 +844,9 @@ module GMQ
       end
 
       # Instance method to retrieve this certificate if it been generated in RCI
-      # in the past. If we provide a callback as true, the system will request a 
-      # callback be initiated to the GMQ to deliver the certificate. 
-      # If you just want the base64, you simply set the callback as false. 
+      # in the past. If we provide a callback as true, the system will request a
+      # callback be initiated to the GMQ to deliver the certificate.
+      # If you just want the base64, you simply set the callback as false.
       # If you need the final process to be executed, including mailing the user
       # the certificate, then you must invoke the callback as true.
       def queue_retrieve_certificate_job(db_connection = nil, callback=false)
@@ -855,13 +855,13 @@ module GMQ
         if(db_connection.nil?)
           # call the rapsheet validation job with 'mute' paramter as true
           # to supress notifications when re-queing
-          Store.db.rpush(queue_pending, job_certificate_retrieve_data(true))
+          Store.db.rpush(queue_pending, job_certificate_retrieve_data(callback))
         else
           # when a connection is provided, such as for a pipelined request
           # use it:
           # call the rapsheet validation job with 'mute' paramter as true to
           # supress notifications when re-queing
-          db_connection.rpush(queue_pending, job_certificate_retrieve_data(true))
+          db_connection.rpush(queue_pending, job_certificate_retrieve_data(callback))
         end
 
         # update the status
